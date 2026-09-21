@@ -19,8 +19,8 @@ if (is_post()) {
         if ($shift) {
             flash('You already have an open shift.', 'warning');
         } else {
-            db_exec('INSERT INTO shifts (user_id, opening_float, note) VALUES (?,?,?)',
-                [user_id(), post_amount('opening_float'), post('note') ?: null]);
+            db_exec('INSERT INTO shifts (company_id, user_id, opening_float, note) VALUES (?,?,?,?)',
+                [company_id(), user_id(), post_amount('opening_float'), post('note') ?: null]);
             flash('Shift opened. The drawer is ready.');
         }
         redirect('admin/shifts.php');
@@ -32,8 +32,7 @@ if (is_post()) {
             redirect('admin/shifts.php');
         }
 
-        // An unpaid order left open would not be counted anywhere — warn, do not block.
-        $stillOpen = (int)db_value("SELECT COUNT(*) FROM orders WHERE status = 'open'");
+        $stillOpen = (int)db_value("SELECT COUNT(*) FROM orders WHERE company_id = ? AND status = 'open'", [company_id()]);
 
         $counted  = post_amount('counted_cash');
         $expected = shift_expected_cash((int)$shift['id']);
@@ -42,8 +41,8 @@ if (is_post()) {
             "UPDATE shifts
                 SET closed_at = NOW(), counted_cash = ?, expected_cash = ?,
                     variance = ?, note = ?, status = 'closed'
-              WHERE id = ? AND status = 'open'",
-            [$counted, $expected, round($counted - $expected, 2), post('note') ?: null, (int)$shift['id']]
+              WHERE id = ? AND company_id = ? AND status = 'open'",
+            [$counted, $expected, round($counted - $expected, 2), post('note') ?: null, (int)$shift['id'], company_id()]
         );
 
         $variance = round($counted - $expected, 2);
@@ -65,129 +64,127 @@ $live = null;
 if ($shift) {
     $sid  = (int)$shift['id'];
     $live = [
-        'cash_sales'  => (float)db_value("SELECT COALESCE(SUM(total),0) FROM orders WHERE shift_id = ? AND status = 'paid' AND payment_method = 'cash'", [$sid]),
-        'other_sales' => (float)db_value("SELECT COALESCE(SUM(total),0) FROM orders WHERE shift_id = ? AND status = 'paid' AND payment_method <> 'cash'", [$sid]),
-        'orders'      => (int)db_value("SELECT COUNT(*) FROM orders WHERE shift_id = ? AND status = 'paid'", [$sid]),
-        'expenses'    => (float)db_value("SELECT COALESCE(SUM(amount),0) FROM expenses WHERE shift_id = ? AND paid_from = 'drawer'", [$sid]),
+        'cash_sales'  => (float)db_value("SELECT COALESCE(SUM(total),0) FROM orders WHERE company_id = ? AND shift_id = ? AND status = 'paid' AND payment_method = 'cash'", [company_id(), $sid]),
+        'other_sales' => (float)db_value("SELECT COALESCE(SUM(total),0) FROM orders WHERE company_id = ? AND shift_id = ? AND status = 'paid' AND payment_method <> 'cash'", [company_id(), $sid]),
+        'orders'      => (int)db_value("SELECT COUNT(*) FROM orders WHERE company_id = ? AND shift_id = ? AND status = 'paid'", [company_id(), $sid]),
+        'expenses'    => (float)db_value("SELECT COALESCE(SUM(amount),0) FROM expenses WHERE company_id = ? AND shift_id = ? AND paid_from = 'drawer'", [company_id(), $sid]),
         'expected'    => shift_expected_cash($sid),
     ];
 }
 
 $history = $isAdmin
     ? db_all("SELECT s.*, u.full_name FROM shifts s JOIN users u ON u.id = s.user_id
-               WHERE s.status = 'closed' ORDER BY s.id DESC LIMIT 40")
+               WHERE s.company_id = ? AND s.status = 'closed' ORDER BY s.id DESC LIMIT 40", [company_id()])
     : db_all("SELECT s.*, u.full_name FROM shifts s JOIN users u ON u.id = s.user_id
-               WHERE s.status = 'closed' AND s.user_id = ? ORDER BY s.id DESC LIMIT 40", [user_id()]);
+               WHERE s.company_id = ? AND s.status = 'closed' AND s.user_id = ? ORDER BY s.id DESC LIMIT 40", [company_id(), user_id()]);
 
 $pageTitle = 'Cash Drawer';
 require __DIR__ . '/../core/header.php';
 ?>
 
 <?php if (!$shift): ?>
-    <div class="row g-3">
-        <div class="col-lg-5">
-            <div class="card">
-                <div class="card-header">Open a shift</div>
-                <div class="card-body">
-                    <p class="text-muted">Count the cash already in the drawer and enter it as the opening float.</p>
-                    <form method="post">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="action" value="open">
-                        <div class="mb-3">
-                            <label class="form-label">Opening float</label>
-                            <input type="number" name="opening_float" step="0.01" min="0"
-                                   class="form-control form-control-lg text-end" value="0.00" required autofocus>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Note (optional)</label>
-                            <input type="text" name="note" class="form-control" maxlength="255">
-                        </div>
-                        <button class="btn btn-lg text-white w-100" style="background:var(--ok)">Open shift</button>
-                    </form>
-                </div>
+    <div class="max-w-lg">
+        <div class="card">
+            <div class="card-header">Open a shift</div>
+            <div class="card-body">
+                <p class="text-muted text-sm mb-3">Count the cash already in the drawer and enter it as the opening float.</p>
+                <form method="post" class="space-y-3">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="open">
+                    <div>
+                        <label class="label">Opening float</label>
+                        <input type="number" name="opening_float" step="0.01" min="0"
+                               class="input input-lg text-right" value="0.00" required autofocus>
+                    </div>
+                    <div>
+                        <label class="label">Note (optional)</label>
+                        <input type="text" name="note" class="input" maxlength="255">
+                    </div>
+                    <button class="btn btn-ok btn-lg w-full">Open shift</button>
+                </form>
             </div>
         </div>
     </div>
 <?php else: ?>
-    <div class="row g-3 mb-3">
-        <div class="col-6 col-lg-3"><div class="stat-card">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div class="stat-card">
             <div class="label">Opening float</div><div class="value"><?= money($shift['opening_float']) ?></div>
-            <small class="text-muted">Since <?= dt($shift['opened_at'], 'g:i A') ?></small>
-        </div></div>
-        <div class="col-6 col-lg-3"><div class="stat-card good">
+            <small class="text-muted text-xs">Since <?= dt($shift['opened_at'], 'g:i A') ?></small>
+        </div>
+        <div class="stat-card good">
             <div class="label">Cash sales</div><div class="value"><?= money($live['cash_sales']) ?></div>
-            <small class="text-muted"><?= (int)$live['orders'] ?> paid order(s)</small>
-        </div></div>
-        <div class="col-6 col-lg-3"><div class="stat-card bad">
+            <small class="text-muted text-xs"><?= (int)$live['orders'] ?> paid order(s)</small>
+        </div>
+        <div class="stat-card bad">
             <div class="label">Paid out of drawer</div><div class="value"><?= money($live['expenses']) ?></div>
-            <small class="text-muted">Expenses this shift</small>
-        </div></div>
-        <div class="col-6 col-lg-3"><div class="stat-card accent">
+            <small class="text-muted text-xs">Expenses this shift</small>
+        </div>
+        <div class="stat-card accent">
             <div class="label">Drawer should hold</div><div class="value"><?= money($live['expected']) ?></div>
-            <small class="text-muted">Float + cash − expenses</small>
-        </div></div>
+            <small class="text-muted text-xs">Float + cash − expenses</small>
+        </div>
     </div>
 
     <?php if ($live['other_sales'] > 0): ?>
-        <p class="text-muted">Card and mobile-money sales this shift: <strong><?= money($live['other_sales']) ?></strong> (not in the drawer).</p>
+        <p class="text-muted text-sm mb-3">Card and mobile-money sales this shift: <strong><?= money($live['other_sales']) ?></strong> (not in the drawer).</p>
     <?php endif; ?>
 
-    <div class="row g-3">
-        <div class="col-lg-5">
-            <div class="card">
-                <div class="card-header">Close the shift</div>
-                <div class="card-body">
-                    <form method="post" onsubmit="return confirm('Close this shift? It cannot be reopened.');">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="action" value="close">
-                        <div class="mb-3">
-                            <label class="form-label">Cash counted in the drawer</label>
-                            <input type="number" name="counted_cash" step="0.01" min="0"
-                                   class="form-control form-control-lg text-end" required autofocus>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Note (optional)</label>
-                            <input type="text" name="note" class="form-control" maxlength="255"
-                                   placeholder="Explain any difference">
-                        </div>
-                        <button class="btn btn-lg btn-dark w-100">Close shift</button>
-                    </form>
-                </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+        <div class="card">
+            <div class="card-header">Close the shift</div>
+            <div class="card-body">
+                <form method="post" onsubmit="return confirm('Close this shift? It cannot be reopened.');" class="space-y-3">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="close">
+                    <div>
+                        <label class="label">Cash counted in the drawer</label>
+                        <input type="number" name="counted_cash" step="0.01" min="0"
+                               class="input input-lg text-right" required autofocus>
+                    </div>
+                    <div>
+                        <label class="label">Note (optional)</label>
+                        <input type="text" name="note" class="input" maxlength="255"
+                               placeholder="Explain any difference">
+                    </div>
+                    <button class="btn btn-dark btn-lg w-full">Close shift</button>
+                </form>
             </div>
         </div>
-        <div class="col-lg-7">
-            <a class="btn btn-outline-secondary mb-2" href="<?= url('admin/expenses.php') ?>">Record an expense</a>
-            <a class="btn btn-warning mb-2" href="<?= url('public/pos.php') ?>">Back to the POS</a>
+        <div class="flex gap-2 items-start pt-4">
+            <a class="btn btn-outline" href="<?= url('admin/expenses.php') ?>">Record an expense</a>
+            <a class="btn btn-accent" href="<?= url('public/pos.php') ?>">Back to the POS</a>
         </div>
     </div>
 <?php endif; ?>
 
-<h2 class="h6 mt-4 mb-2">Closed shifts</h2>
-<table class="table table-sm align-middle">
-    <thead>
-        <tr><th>Opened</th><th>Closed</th><?= $isAdmin ? '<th>Cashier</th>' : '' ?>
-            <th class="text-end">Float</th><th class="text-end">Expected</th>
-            <th class="text-end">Counted</th><th class="text-end">Variance</th><th>Note</th></tr>
-    </thead>
+<h2 class="text-base font-semibold mt-5 mb-2">Closed shifts</h2>
+<div class="card overflow-x-auto">
+<table class="tbl">
+    <thead><tr>
+        <th>Opened</th><th>Closed</th><?= $isAdmin ? '<th>Cashier</th>' : '' ?>
+        <th class="text-right">Float</th><th class="text-right">Expected</th>
+        <th class="text-right">Counted</th><th class="text-right">Variance</th><th>Note</th>
+    </tr></thead>
     <tbody>
     <?php foreach ($history as $h): $v = (float)$h['variance']; ?>
         <tr>
             <td><?= dt($h['opened_at'], 'd M, g:i A') ?></td>
             <td><?= dt($h['closed_at'], 'd M, g:i A') ?></td>
             <?= $isAdmin ? '<td>' . e($h['full_name']) . '</td>' : '' ?>
-            <td class="text-end"><?= money($h['opening_float']) ?></td>
-            <td class="text-end"><?= money($h['expected_cash']) ?></td>
-            <td class="text-end"><?= money($h['counted_cash']) ?></td>
-            <td class="text-end fw-bold" style="color:<?= abs($v) < 0.005 ? 'var(--ok)' : 'var(--bad)' ?>">
+            <td class="text-right"><?= money($h['opening_float']) ?></td>
+            <td class="text-right"><?= money($h['expected_cash']) ?></td>
+            <td class="text-right"><?= money($h['counted_cash']) ?></td>
+            <td class="text-right font-semibold" style="color:<?= abs($v) < 0.005 ? '#1f7a4d' : '#b3261e' ?>">
                 <?= ($v > 0 ? '+' : '') . money($v) ?>
             </td>
-            <td class="text-muted small"><?= e($h['note'] ?? '') ?></td>
+            <td class="text-muted text-xs"><?= e($h['note'] ?? '') ?></td>
         </tr>
     <?php endforeach; ?>
     <?php if (!$history): ?>
-        <tr><td colspan="8" class="text-center text-muted py-4">No shift has been closed yet.</td></tr>
+        <tr><td colspan="8" class="text-center text-muted py-8">No shift has been closed yet.</td></tr>
     <?php endif; ?>
     </tbody>
 </table>
+</div>
 
 <?php require __DIR__ . '/../core/footer.php'; ?>

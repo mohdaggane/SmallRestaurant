@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Google Font ─────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ── Custom component layer ──────────────────────────────────────────── */
+@layer components {
+
+  /* Stat card */
+  .stat-card {
+    @apply bg-white border border-line rounded-xl p-4 h-full;
+  }
+  .stat-card .label {
+    @apply text-xs uppercase tracking-wider text-muted;
+  }
+  .stat-card .value {
+    @apply text-2xl font-bold mt-1;
+  }
+  .stat-card.accent { @apply border-l-4 border-l-accent; }
+  .stat-card.good   { @apply border-l-4 border-l-ok; }
+  .stat-card.bad    { @apply border-l-4 border-l-bad; }
+
+  /* POS item button */
+  .item-btn {
+    @apply bg-white border border-line rounded-xl p-3 text-left cursor-pointer
+           min-h-[84px] flex flex-col justify-between
+           transition-all duration-150
+           hover:shadow-md hover:border-accent hover:scale-[1.02]
+           active:scale-95;
+  }
+  .item-btn .nm { @apply font-semibold text-sm leading-snug; }
+  .item-btn .pr { @apply text-brand font-bold mt-2; }
+
+  /* Category tab pill */
+  .cat-tab {
+    @apply border border-line bg-white rounded-full px-4 py-1.5 text-sm cursor-pointer
+           transition-colors duration-150 hover:bg-brand-light;
+  }
+  .cat-tab.active {
+    @apply bg-brand border-brand text-white font-semibold;
+  }
+
+  /* Cart line */
+  .cart-line {
+    @apply flex items-center gap-2 px-3.5 py-2 border-b border-dashed border-line;
+  }
+  .cart-line .nm { @apply flex-1 text-sm leading-tight; }
+  .cart-line .lt { @apply w-16 text-right font-semibold text-sm; }
+  .qty-btn {
+    @apply w-8 h-8 rounded-lg border border-line bg-white font-bold leading-none cursor-pointer
+           transition-colors hover:bg-brand-light flex items-center justify-center;
+  }
+  .existing-head {
+    @apply text-[11px] uppercase tracking-widest text-muted px-3.5 py-2 bg-brand-light;
+  }
+  .cart-line.existing { @apply bg-[#fcfaf7]; }
+  .cart-line.existing .nm { @apply text-muted; }
+
+  /* KDS card */
+  .kds-card {
+    @apply bg-white border border-line border-l-[5px] border-l-accent rounded-xl overflow-hidden;
+  }
+  .kds-card.stale { @apply border-l-bad; }
+  .kds-card .kds-head {
+    @apply px-3 py-2.5 border-b border-line flex justify-between items-start;
+  }
+
+  /* Receipt */
+  .receipt {
+    @apply w-[300px] mx-auto bg-white p-4 font-mono text-[12.5px] text-black border border-line;
+  }
+  .receipt h2    { @apply text-base text-center m-0 mb-0.5; }
+  .receipt .rule { @apply border-t border-dashed border-black my-1.5; }
+  .receipt .center { text-align: center; }
+  .receipt .r      { text-align: right; }
+  .receipt table   { width: 100%; border-collapse: collapse; }
+  .receipt table td { padding: 1px 0; }
+  .pay-code {
+    @apply text-center font-mono text-lg font-bold tracking-wide leading-snug
+           break-all border border-dashed border-black rounded-[4px] px-1 py-1.5 my-1.5;
+  }
+
+  /* Flash alerts */
+  .flash-success { @apply bg-green-50 border border-green-300 text-green-800 rounded-lg px-4 py-3 mb-4; }
+  .flash-danger  { @apply bg-red-50 border border-red-300 text-red-800 rounded-lg px-4 py-3 mb-4; }
+  .flash-warning { @apply bg-amber-50 border border-amber-300 text-amber-800 rounded-lg px-4 py-3 mb-4; }
+  .flash-info    { @apply bg-blue-50 border border-blue-300 text-blue-800 rounded-lg px-4 py-3 mb-4; }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold;
+  }
+  .badge-success  { @apply bg-green-100 text-green-800; }
+  .badge-danger   { @apply bg-red-100 text-red-800; }
+  .badge-warning  { @apply bg-amber-100 text-amber-800; }
+  .badge-secondary{ @apply bg-gray-100 text-gray-700; }
+  .badge-dark     { @apply bg-gray-800 text-white; }
+  .badge-info     { @apply bg-blue-100 text-blue-800; }
+  .badge-accent   { @apply bg-accent text-ink; }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg
+           font-medium text-sm cursor-pointer transition-all duration-150
+           focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-brand  { @apply bg-brand text-white hover:bg-brand-dark focus:ring-brand; }
+  .btn-accent { @apply bg-accent text-ink hover:bg-amber-500 focus:ring-accent; }
+  .btn-ok     { @apply bg-ok text-white hover:bg-green-700 focus:ring-ok; }
+  .btn-danger { @apply bg-bad text-white hover:bg-red-700 focus:ring-bad; }
+  .btn-outline{ @apply bg-transparent border border-line text-ink hover:bg-brand-light focus:ring-line; }
+  .btn-outline-danger { @apply bg-transparent border border-bad text-bad hover:bg-red-50 focus:ring-bad; }
+  .btn-outline-warning{ @apply bg-transparent border border-amber-400 text-amber-700 hover:bg-amber-50; }
+  .btn-dark   { @apply bg-gray-800 text-white hover:bg-gray-900 focus:ring-gray-700; }
+  .btn-sm     { @apply px-2.5 py-1 text-xs rounded-md; }
+  .btn-lg     { @apply px-6 py-3 text-base rounded-xl; }
+
+  /* Form inputs */
+  .input {
+    @apply w-full rounded-lg border border-line px-3 py-2 text-sm text-ink
+           bg-white focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand
+           placeholder:text-muted transition-shadow;
+  }
+  .input-lg { @apply px-4 py-3 text-base rounded-xl; }
+  .select   { @apply input; }
+  .label    { @apply block text-sm font-medium text-ink mb-1; }
+  .form-text{ @apply text-xs text-muted mt-1; }
+  .checkbox { @apply w-4 h-4 rounded border-line text-brand focus:ring-brand/40; }
+
+  /* Card */
+  .card { @apply bg-white border border-line rounded-xl overflow-hidden; }
+  .card-header {
+    @apply px-4 py-3 border-b border-line font-semibold text-sm bg-white;
+  }
+  .card-body { @apply px-4 py-4; }
+  .card-footer { @apply px-4 py-3 border-t border-line bg-white; }
+
+  /* Table */
+  .tbl { @apply w-full text-sm; }
+  .tbl thead tr { @apply border-b border-line; }
+  .tbl thead th { @apply px-3 py-2.5 text-left font-semibold text-xs uppercase tracking-wider text-muted; }
+  .tbl tbody tr { @apply border-b border-line hover:bg-brand-light/40 transition-colors; }
+  .tbl tbody td { @apply px-3 py-2.5; }
+  .tbl tfoot tr { @apply bg-brand-light/50; }
+  .tbl tfoot td,
+  .tbl tfoot th { @apply px-3 py-2.5 font-semibold; }
+
+  /* Daily sales bar chart */
+  .chart-plot {
+    @apply flex items-end gap-0.5 h-[170px] border-b border-line relative;
+  }
+  .bar-col {
+    @apply flex-1 flex flex-col justify-end items-center h-full relative cursor-default;
+  }
+  .bar {
+    @apply w-[74%] max-w-[34px] min-h-[2px] bg-brand rounded-t;
+  }
+  .bar-col.peak .bar { @apply bg-accent; }
+  .bar-val { @apply text-[10px] text-muted mb-0.5 whitespace-nowrap; }
+  .bar-tip {
+    @apply hidden absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-1.5
+           bg-ink text-white px-2 py-1 rounded text-[11px] whitespace-nowrap z-10;
+  }
+  .bar-col:hover .bar-tip { @apply block; }
+  .bar-col:hover .bar     { @apply brightness-110; }
+
+  /* P&L report table */
+  .pl-table tbody tr.subtotal td { @apply border-t border-ink; }
+  .pl-table tbody tr.grand td {
+    @apply border-t-2 border-ink font-bold text-base;
+  }
+  .pl-table tbody tr.grand.loss td { @apply text-bad; }
+  .pl-table tbody tr.grand:not(.loss) td { @apply text-ok; }
+
+  /* Modal overlay */
+  .modal-backdrop {
+    @apply fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4;
+  }
+  .modal-box {
+    @apply bg-white rounded-2xl shadow-2xl w-full max-w-md z-50 overflow-hidden;
+  }
+  .modal-header {
+    @apply px-5 py-4 border-b border-line flex items-center justify-between;
+  }
+  .modal-body   { @apply px-5 py-4; }
+  .modal-footer { @apply px-5 py-4 border-t border-line flex justify-end gap-2; }
+}
+
+/* ── Utilities ───────────────────────────────────────────────────────── */
+@layer utilities {
+  .text-end   { text-align: right; }
+  .text-nowrap{ white-space: nowrap; }
+}
+
+/* ── Print ───────────────────────────────────────────────────────────── */
+@media print {
+  .no-print, .topbar, .app-sidebar { display: none !important; }
+  body { background: #fff; }
+  .receipt { border: 0; margin: 0; width: auto; }
+}

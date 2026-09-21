@@ -81,15 +81,108 @@
         renderCart();
     }
 
+    /* -------------------------------------------------- existing order (edit mode) */
+    var edit     = cfg.editOrder || null;
+    var existing = edit ? edit.lines : [];
+
+    var STATUS_LABEL = { pending: 'waiting', preparing: 'cooking', served: 'served' };
+
+    function existingSubtotal() {
+        return existing.reduce(function (s, l) { return s + Number(l.line_total); }, 0);
+    }
+
+    function renderExisting() {
+        var box = $('existingLines');
+        if (!box) { return; }
+        box.innerHTML = '';
+
+        existing.forEach(function (l) {
+            var row = document.createElement('div');
+            row.className = 'cart-line existing';
+
+            var nm = document.createElement('div');
+            nm.className = 'nm';
+            nm.appendChild(document.createTextNode(l.qty + ' × ' + l.name));
+            nm.appendChild(document.createElement('br'));
+            var sm = document.createElement('small');
+            sm.textContent = (l.round > 1 ? 'Round ' + l.round + ' · ' : '') + (STATUS_LABEL[l.kitchen_status] || l.kitchen_status);
+            nm.appendChild(sm);
+            row.appendChild(nm);
+
+            if (l.removable) {
+                var less = document.createElement('button');
+                less.type = 'button';
+                less.className = 'qty-btn';
+                less.title = 'Reduce by one';
+                less.textContent = '-';
+                less.addEventListener('click', function () { updateLine(l, l.qty - 1); });
+                row.appendChild(less);
+
+                var drop = document.createElement('button');
+                drop.type = 'button';
+                drop.className = 'qty-btn text-danger';
+                drop.title = 'Remove from order';
+                drop.textContent = '×';
+                drop.addEventListener('click', function () { updateLine(l, 0); });
+                row.appendChild(drop);
+            } else {
+                var lock = document.createElement('small');
+                lock.className = 'text-muted';
+                lock.title = 'The kitchen has started this item. Only an admin void can remove it.';
+                lock.textContent = 'locked';
+                row.appendChild(lock);
+            }
+
+            var lt = document.createElement('span');
+            lt.className = 'lt';
+            lt.textContent = money(l.line_total);
+            row.appendChild(lt);
+
+            box.appendChild(row);
+        });
+    }
+
+    /* Reduce (qty > 0) or remove (qty = 0) a line already on the order. */
+    function updateLine(line, qty) {
+        var msg = qty === 0
+            ? 'Remove ' + line.name + ' from this order?'
+            : 'Reduce ' + line.name + ' to ' + qty + '?';
+        if (!confirm(msg)) { return; }
+
+        fetch(cfg.lineUrl, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': cfg.csrf },
+            body:    JSON.stringify({ order_id: edit.id, line_id: line.id, qty: qty })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (!res.ok) {
+                alert(res.error || 'The order could not be changed.');
+                return;
+            }
+            existing = res.lines;
+            renderExisting();
+            renderCart();
+            toast(qty === 0 ? line.name + ' removed.' : line.name + ' reduced to ' + qty + '.');
+        })
+        .catch(function () {
+            alert('Could not reach the server. Check that Apache and MySQL are running.');
+        });
+    }
+
     function totals() {
-        var sub = cart.reduce(function (s, l) { return s + l.price * l.qty; }, 0);
+        var sub = existingSubtotal() + cart.reduce(function (s, l) { return s + l.price * l.qty; }, 0);
         var disc = Math.min(Math.max(Number($('discount').value) || 0, 0), sub);
-        var tax = (sub - disc) * (Number(cfg.taxPercent) || 0) / 100;
+        var net  = round2(sub - disc);
+        // VAT on top, in whole cents — the same rule as vat_amount() in PHP,
+        // so the screen and the saved bill never differ by a cent.
+        var tax  = Math.round(Math.round(net * 100) * (Number(cfg.taxPercent) || 0) / 100) / 100;
         return {
             sub:   round2(sub),
             disc:  round2(disc),
-            tax:   round2(tax),
-            total: round2(sub - disc + tax)
+            net:   net,
+            tax:   tax,
+            total: round2(net + tax)
         };
     }
 
@@ -102,7 +195,9 @@
         if (cart.length === 0) {
             var p = document.createElement('div');
             p.className = 'empty-cart';
-            p.textContent = 'Tap a menu item to start an order.';
+            p.textContent = edit
+                ? 'Tap a menu item to add it to this order.'
+                : 'Tap a menu item to start an order.';
             box.appendChild(p);
         }
 
@@ -151,6 +246,7 @@
         var t = totals();
         $('sumSub').textContent = money(t.sub);
         $('sumTotal').textContent = money(t.total);
+        if ($('sumNet')) { $('sumNet').textContent = money(t.net); }
         if ($('sumTax')) { $('sumTax').textContent = money(t.tax); }
         renderChange();
     }
@@ -166,7 +262,7 @@
     /* -------------------------------------------------- submit */
     function submitOrder(action) {
         if (cart.length === 0) {
-            alert('The order is empty.');
+            alert(edit ? 'Tap the items to add first.' : 'The order is empty.');
             return;
         }
 
@@ -195,6 +291,7 @@
                 return { id: l.id, qty: l.qty, note: '' };
             })
         };
+        if (edit) { payload.order_id = edit.id; }
 
         setBusy(true);
         fetch(cfg.saveUrl, {
@@ -211,6 +308,11 @@
             }
             if (action === 'pay') {
                 window.open(cfg.receiptUrl + '?id=' + res.order_id, '_blank');
+            }
+            if (edit) {
+                // Round saved; back to the open orders list where it now shows.
+                window.location.href = cfg.ordersUrl;
+                return;
             }
             resetCart();
             toast(action === 'pay'
@@ -232,8 +334,12 @@
 
     function resetCart() {
         cart = [];
-        $('discount').value = 0;
-        $('tableLabel').value = '';
+        // In edit mode "Clear" only drops the new items; the order's own
+        // table and discount stay as they are.
+        if (!edit) {
+            $('discount').value = 0;
+            $('tableLabel').value = '';
+        }
         if ($('paidAmount')) { $('paidAmount').value = ''; }
         renderCart();
     }
@@ -280,6 +386,7 @@
         $('btnCharge').addEventListener('click', function () { submitOrder('pay'); });
     }
 
+    renderExisting();
     renderItems();
     renderCart();
 }());

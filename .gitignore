@@ -1,0 +1,6 @@
+# Database dumps hold password hashes and live sales — never commit them.
+backups/
+
+# Editor settings
+.vscode/
+node_modules/

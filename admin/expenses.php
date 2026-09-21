@@ -28,9 +28,9 @@ if (is_post()) {
             flash('An expense needs a description and an amount above zero.', 'danger');
         } else {
             db_exec(
-                'INSERT INTO expenses (spent_on, category, description, amount, paid_from, shift_id, user_id)
-                 VALUES (?,?,?,?,?,?,?)',
-                [$date, $cat, $desc, $amount, $from,
+                'INSERT INTO expenses (company_id, spent_on, category, description, amount, paid_from, shift_id, user_id)
+                 VALUES (?,?,?,?,?,?,?,?)',
+                [company_id(), $date, $cat, $desc, $amount, $from,
                  ($from === 'drawer' && $shift) ? (int)$shift['id'] : null, user_id()]
             );
             flash('Expense recorded.');
@@ -39,7 +39,7 @@ if (is_post()) {
     }
 
     if ($action === 'delete' && $isAdmin) {
-        db_exec('DELETE FROM expenses WHERE id = ?', [(int)post('id')]);
+        db_exec('DELETE FROM expenses WHERE id = ? AND company_id = ?', [(int)post('id'), company_id()]);
         flash('Expense deleted.');
         redirect('admin/expenses.php');
     }
@@ -51,9 +51,9 @@ $to   = get('to')   !== '' ? get('to')   : date('Y-m-d');
 $rows = db_all(
     'SELECT e.*, u.full_name
        FROM expenses e JOIN users u ON u.id = e.user_id
-      WHERE e.spent_on BETWEEN ? AND ?
+      WHERE e.company_id = ? AND e.spent_on BETWEEN ? AND ?
       ORDER BY e.spent_on DESC, e.id DESC',
-    [$from, $to]
+    [company_id(), $from, $to]
 );
 
 $total    = array_sum(array_map(fn($r) => (float)$r['amount'], $rows));
@@ -67,69 +67,69 @@ $pageTitle = 'Expenses';
 require __DIR__ . '/../core/header.php';
 ?>
 
-<div class="row g-3">
-    <div class="col-lg-4">
+<div class="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-4">
+    <div class="space-y-3">
         <div class="card">
             <div class="card-header">Record an expense</div>
             <div class="card-body">
                 <?php if (!$shift): ?>
-                    <div class="alert alert-warning py-2 small">
+                    <div class="flash-warning text-sm">
                         No shift is open, so a drawer expense will not be tied to a cash drawer.
                     </div>
                 <?php endif; ?>
-                <form method="post">
+                <form method="post" class="space-y-3">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="save">
 
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <input type="text" name="description" class="form-control" required maxlength="255"
+                    <div>
+                        <label class="label">Description</label>
+                        <input type="text" name="description" class="input" required maxlength="255"
                                placeholder="e.g. Sugar 5kg" autofocus>
                     </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-7">
-                            <label class="form-label">Category</label>
-                            <select name="category" class="form-select">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="label">Category</label>
+                            <select name="category" class="select">
                                 <?php foreach ($CATEGORIES as $c): ?>
                                     <option value="<?= e($c) ?>"><?= e($c) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-5">
-                            <label class="form-label">Amount</label>
+                        <div>
+                            <label class="label">Amount</label>
                             <input type="number" name="amount" step="0.01" min="0.01"
-                                   class="form-control text-end" required>
+                                   class="input text-right" required>
                         </div>
                     </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label">Date</label>
-                            <input type="date" name="spent_on" class="form-control" value="<?= date('Y-m-d') ?>">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="label">Date</label>
+                            <input type="date" name="spent_on" class="input" value="<?= date('Y-m-d') ?>">
                         </div>
-                        <div class="col-6">
-                            <label class="form-label">Paid from</label>
-                            <select name="paid_from" class="form-select">
+                        <div>
+                            <label class="label">Paid from</label>
+                            <select name="paid_from" class="select">
                                 <option value="drawer">Till drawer</option>
                                 <option value="other">Own / bank money</option>
                             </select>
                         </div>
                     </div>
 
-                    <button class="btn text-white w-100" style="background:var(--brand)">Save expense</button>
+                    <button class="btn btn-brand w-full">Save expense</button>
                 </form>
             </div>
         </div>
 
         <?php if ($byCat): ?>
-            <div class="card mt-3">
+            <div class="card">
                 <div class="card-header">By category · <?= dt($from, 'd M') ?> to <?= dt($to, 'd M') ?></div>
-                <ul class="list-group list-group-flush">
+                <ul class="divide-y divide-line">
                     <?php foreach ($byCat as $cat => $amt): ?>
-                        <li class="list-group-item d-flex justify-content-between">
+                        <li class="px-4 py-2.5 flex justify-between text-sm">
                             <span><?= e($cat) ?></span><strong><?= money($amt) ?></strong>
                         </li>
                     <?php endforeach; ?>
-                    <li class="list-group-item d-flex justify-content-between bg-light">
+                    <li class="px-4 py-2.5 flex justify-between text-sm bg-brand-light/40">
                         <strong>Total</strong><strong><?= money($total) ?></strong>
                     </li>
                 </ul>
@@ -137,59 +137,58 @@ require __DIR__ . '/../core/header.php';
         <?php endif; ?>
     </div>
 
-    <div class="col-lg-8">
-        <form class="row g-2 mb-3" method="get">
-            <div class="col-auto">
-                <input type="date" name="from" class="form-control" value="<?= e($from) ?>">
-            </div>
-            <div class="col-auto align-self-center">to</div>
-            <div class="col-auto">
-                <input type="date" name="to" class="form-control" value="<?= e($to) ?>">
-            </div>
-            <div class="col-auto">
-                <button class="btn btn-outline-secondary">Filter</button>
-            </div>
+    <div>
+        <form class="flex flex-wrap gap-2 mb-3" method="get">
+            <input type="date" name="from" class="input" value="<?= e($from) ?>">
+            <span class="self-center text-muted">to</span>
+            <input type="date" name="to" class="input" value="<?= e($to) ?>">
+            <button class="btn btn-outline">Filter</button>
         </form>
 
-        <table class="table table-sm align-middle">
-            <thead>
-                <tr><th>Date</th><th>Description</th><th>Category</th><th>Paid from</th>
-                    <th>By</th><th class="text-end">Amount</th><?= $isAdmin ? '<th></th>' : '' ?></tr>
-            </thead>
+        <div class="card overflow-x-auto">
+        <table class="tbl">
+            <thead><tr>
+                <th>Date</th><th>Description</th><th>Category</th><th>Paid from</th>
+                <th>By</th><th class="text-right">Amount</th><?= $isAdmin ? '<th></th>' : '' ?>
+            </tr></thead>
             <tbody>
             <?php foreach ($rows as $r): ?>
                 <tr>
                     <td><?= dt($r['spent_on'], 'd M Y') ?></td>
                     <td><?= e($r['description']) ?></td>
                     <td class="text-muted"><?= e($r['category']) ?></td>
-                    <td><span class="badge bg-<?= $r['paid_from'] === 'drawer' ? 'warning text-dark' : 'secondary' ?>">
-                        <?= $r['paid_from'] === 'drawer' ? 'Drawer' : 'Other' ?></span></td>
+                    <td>
+                        <span class="badge <?= $r['paid_from'] === 'drawer' ? 'badge-warning' : 'badge-secondary' ?>">
+                            <?= $r['paid_from'] === 'drawer' ? 'Drawer' : 'Other' ?>
+                        </span>
+                    </td>
                     <td class="text-muted"><?= e($r['full_name']) ?></td>
-                    <td class="text-end fw-bold"><?= money($r['amount']) ?></td>
+                    <td class="text-right font-semibold"><?= money($r['amount']) ?></td>
                     <?php if ($isAdmin): ?>
-                        <td class="text-end">
+                        <td class="text-right">
                             <form method="post" onsubmit="return confirm('Delete this expense?');">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
-                                <button class="btn btn-sm btn-outline-danger">×</button>
+                                <button class="btn btn-outline-danger btn-sm">&times;</button>
                             </form>
                         </td>
                     <?php endif; ?>
                 </tr>
             <?php endforeach; ?>
             <?php if (!$rows): ?>
-                <tr><td colspan="7" class="text-center text-muted py-4">No expenses in this period.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-8">No expenses in this period.</td></tr>
             <?php endif; ?>
             </tbody>
             <tfoot>
-                <tr class="table-light">
-                    <th colspan="5" class="text-end">Total</th>
-                    <th class="text-end"><?= money($total) ?></th>
+                <tr>
+                    <th colspan="5" class="text-right">Total</th>
+                    <th class="text-right"><?= money($total) ?></th>
                     <?= $isAdmin ? '<th></th>' : '' ?>
                 </tr>
             </tfoot>
         </table>
+        </div>
     </div>
 </div>
 

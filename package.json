@@ -1,0 +1,15 @@
+{
+  "name": "smallrest-pos",
+  "private": true,
+  "description": "Build tooling only. The till itself runs on PHP + the committed assets/css/app.css and needs no Node.",
+  "scripts": {
+    "css": "tailwindcss -i ./assets/css/src/tailwind.css -o ./assets/css/app.css --minify",
+    "css:watch": "tailwindcss -i ./assets/css/src/tailwind.css -o ./assets/css/app.css --watch",
+    "screens": "node tests/screens.mjs"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.9",
+    "playwright-core": "^1.48.0",
+    "tailwindcss": "~3.4.14"
+  }
+}

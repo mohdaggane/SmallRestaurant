@@ -14,7 +14,7 @@ csrf_check();
 
 $orderId = (int)($_POST['order_id'] ?? 0);
 $reason  = mb_substr(post('reason', 'Voided by administrator'), 0, 255);
-$order   = db_one('SELECT * FROM orders WHERE id = ?', [$orderId]);
+$order   = db_one('SELECT * FROM orders WHERE id = ? AND company_id = ?', [$orderId, company_id()]);
 
 if (!$order) {
     flash('That order no longer exists.', 'danger');
@@ -26,8 +26,8 @@ if ($order['status'] === 'void') {
 }
 
 db_exec(
-    "UPDATE orders SET status = 'void', voided_at = NOW(), void_reason = ? WHERE id = ?",
-    [$reason, $orderId]
+    "UPDATE orders SET status = 'void', voided_at = NOW(), void_reason = ? WHERE id = ? AND company_id = ?",
+    [$reason, $orderId, company_id()]
 );
 
 flash('Order ' . $order['order_no'] . ' has been voided.', 'warning');

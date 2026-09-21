@@ -17,7 +17,7 @@ $method  = in_array($_POST['payment_method'] ?? '', ['cash', 'mobile', 'card'], 
     ? (string)$_POST['payment_method'] : 'cash';
 $paid    = post_amount('paid_amount');
 
-$order = db_one('SELECT * FROM orders WHERE id = ?', [$orderId]);
+$order = db_one('SELECT * FROM orders WHERE id = ? AND company_id = ?', [$orderId, company_id()]);
 
 if (!$order) {
     flash('That order no longer exists.', 'danger');
@@ -34,19 +34,12 @@ if (!$shift) {
     redirect('admin/shifts.php');
 }
 
-$total = (float)$order['total'];
-if ($paid + 0.001 < $total) {
-    flash('Amount received (' . money($paid) . ') is less than the total ' . money($total) . '.', 'danger');
+try {
+    $change = mark_order_paid($orderId, (float)$order['total'], $paid, $method, (int)$shift['id']);
+} catch (OrderException $e) {
+    flash($e->getMessage(), 'danger');
     redirect('public/orders.php');
 }
 
-db_exec(
-    "UPDATE orders
-        SET status = 'paid', paid_amount = ?, change_amount = ?, payment_method = ?,
-            paid_by = ?, shift_id = ?, paid_at = NOW()
-      WHERE id = ? AND status = 'open'",
-    [$paid, round($paid - $total, 2), $method, user_id(), (int)$shift['id'], $orderId]
-);
-
-flash('Order ' . $order['order_no'] . ' paid. Change ' . money($paid - $total) . '.');
+flash('Order ' . $order['order_no'] . ' paid. Change ' . money($change) . '.');
 redirect('public/receipt.php?id=' . $orderId . '&print=1');

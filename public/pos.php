@@ -11,102 +11,148 @@ require_role('cashier', 'waiter');
 $canCharge = has_role('admin', 'cashier');
 $shift     = $canCharge ? open_shift(user_id()) : null;
 
-$categories = db_all('SELECT id, name FROM categories WHERE is_active = 1 ORDER BY sort_order, name');
+$categories = db_all('SELECT id, name FROM categories WHERE company_id = ? AND is_active = 1 ORDER BY sort_order, name', [company_id()]);
 $items      = db_all(
     'SELECT i.id, i.category_id, i.name, i.price, i.cost_price, i.needs_prep
        FROM menu_items i
        JOIN categories c ON c.id = i.category_id
-      WHERE i.is_available = 1 AND c.is_active = 1
-      ORDER BY i.sort_order, i.name'
+      WHERE i.company_id = ? AND i.is_available = 1 AND c.is_active = 1
+      ORDER BY i.sort_order, i.name',
+    [company_id()]
 );
 
-$taxPercent = (float)setting('tax_percent', '0');
+$taxPercent = vat_rate();
 
-$pageTitle = 'POS Terminal';
+// ?order=ID opens the terminal in "add to this order" mode.
+$editOrder = null;
+if (get('order') !== '') {
+    $o = db_one('SELECT * FROM orders WHERE id = ? AND company_id = ?', [(int)get('order'), company_id()]);
+    if (!$o) {
+        flash('That order no longer exists.', 'danger');
+        redirect('public/orders.php');
+    }
+    if ($o['status'] !== 'open') {
+        flash('Order ' . $o['order_no'] . ' is already ' . $o['status'] . ' and can no longer be changed.', 'warning');
+        redirect('public/orders.php');
+    }
+    $editOrder = [
+        'id'          => (int)$o['id'],
+        'order_no'    => $o['order_no'],
+        'order_type'  => $o['order_type'],
+        'table_label' => (string)$o['table_label'],
+        'discount'    => (float)$o['discount'],
+        'lines'       => order_lines_for_pos((int)$o['id']),
+    ];
+}
+
+$pageTitle = $editOrder ? 'Add to order #' . $editOrder['order_no'] : 'POS Terminal';
 $layout    = 'wide';
 require __DIR__ . '/../core/header.php';
 ?>
 
 <?php if ($canCharge && !$shift): ?>
-    <div class="alert alert-warning d-flex justify-content-between align-items-center">
+    <div class="flash-warning flex justify-between items-center mx-3 mb-0">
         <span>Your cash drawer is closed. Open a shift before taking payments.</span>
-        <a class="btn btn-sm btn-dark" href="<?= url('admin/shifts.php') ?>">Open shift</a>
+        <a class="btn btn-dark btn-sm ml-3" href="<?= url('admin/shifts.php') ?>">Open shift</a>
     </div>
 <?php endif; ?>
 
-<div class="pos-grid">
+<?php if ($editOrder): ?>
+    <div class="flash-info flex justify-between items-center mx-3 mb-0">
+        <span>
+            Adding to order <strong>#<?= e($editOrder['order_no']) ?></strong>
+            · <?= $editOrder['order_type'] === 'takeaway' ? 'Takeaway' : 'Dine in' ?><?= $editOrder['table_label'] !== '' ? ' · ' . e($editOrder['table_label']) : '' ?>
+            — new items go to the kitchen as the next round.
+        </span>
+        <a class="btn btn-outline btn-sm ml-3" href="<?= url('public/orders.php') ?>">Cancel</a>
+    </div>
+<?php endif; ?>
+
+<div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-3 p-3 items-start">
     <!-- ------------------------------------------------ menu side -->
     <div>
-        <div class="d-flex gap-2 mb-2">
-            <input type="search" id="itemSearch" class="form-control" placeholder="Search the menu…" autocomplete="off">
-            <a class="btn btn-outline-secondary" href="<?= url('public/orders.php') ?>">Open Orders</a>
+        <div class="flex gap-2 mb-3">
+            <input type="search" id="itemSearch" class="input flex-1" placeholder="Search the menu…" autocomplete="off">
+            <a class="btn btn-outline" href="<?= url('public/orders.php') ?>">Open Orders</a>
         </div>
 
-        <div class="cat-tabs" id="catTabs">
+        <div class="flex gap-2 flex-wrap mb-3" id="catTabs">
             <button class="cat-tab active" data-cat="all">All</button>
             <?php foreach ($categories as $c): ?>
                 <button class="cat-tab" data-cat="<?= (int)$c['id'] ?>"><?= e($c['name']) ?></button>
             <?php endforeach; ?>
         </div>
 
-        <div class="item-grid" id="itemGrid"></div>
-        <p class="text-muted mt-3 d-none" id="noItems">No menu item matches that search.</p>
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5" id="itemGrid"></div>
+        <p class="text-muted mt-3 hidden text-sm" id="noItems">No menu item matches that search.</p>
     </div>
 
     <!-- ------------------------------------------------ cart side -->
-    <div class="cart-panel">
-        <div class="cart-head">
-            <div class="d-flex gap-2 mb-2">
-                <select id="orderType" class="form-select form-select-sm">
+    <div class="bg-white border border-line rounded-xl sticky top-[72px] flex flex-col max-h-[calc(100vh-84px)]">
+        <div class="px-3.5 py-3 border-b border-line">
+            <div class="flex gap-2 mb-2">
+                <select id="orderType" class="select text-sm flex-1" <?= $editOrder ? 'disabled' : '' ?>>
                     <option value="dine_in">Dine in</option>
-                    <option value="takeaway">Takeaway</option>
+                    <option value="takeaway" <?= ($editOrder['order_type'] ?? '') === 'takeaway' ? 'selected' : '' ?>>Takeaway</option>
                 </select>
-                <input type="text" id="tableLabel" class="form-control form-control-sm"
-                       placeholder="Table / name" maxlength="30">
+                <input type="text" id="tableLabel" class="input text-sm flex-1"
+                       placeholder="Table / name" maxlength="30"
+                       value="<?= e($editOrder['table_label'] ?? '') ?>" <?= $editOrder ? 'disabled' : '' ?>>
             </div>
-            <div class="d-flex justify-content-between align-items-center">
-                <strong>Current order</strong>
-                <button class="btn btn-sm btn-outline-danger" id="clearCart">Clear</button>
+            <div class="flex justify-between items-center">
+                <strong class="text-sm font-semibold"><?= $editOrder ? 'New items' : 'Current order' ?></strong>
+                <button class="btn btn-outline-danger btn-sm" id="clearCart">Clear</button>
             </div>
         </div>
 
-        <div class="cart-lines" id="cartLines"></div>
+        <div class="flex-1 overflow-y-auto min-h-[120px]">
+            <?php if ($editOrder): ?>
+                <div class="existing-head">Already on this order</div>
+                <div id="existingLines"></div>
+                <div class="existing-head">New items</div>
+            <?php endif; ?>
+            <div id="cartLines"></div>
+        </div>
 
-        <div class="cart-foot">
-            <div class="total-row"><span>Subtotal</span><span id="sumSub">—</span></div>
-            <div class="total-row">
+        <div class="border-t border-line px-3.5 py-3">
+            <div class="flex justify-between text-sm mb-1"><span>Subtotal</span><span id="sumSub">—</span></div>
+            <div class="flex justify-between text-sm mb-1">
                 <span>Discount</span>
-                <span><input type="number" id="discount" class="form-control form-control-sm text-end"
-                             style="width:100px" min="0" step="0.01" value="0"></span>
+                <span><input type="number" id="discount" class="input text-right text-sm"
+                             style="width:100px" min="0" step="0.01"
+                             value="<?= e(number_format((float)($editOrder['discount'] ?? 0), 2, '.', '')) ?>"></span>
             </div>
             <?php if ($taxPercent > 0): ?>
-                <div class="total-row"><span>Tax (<?= e(rtrim(rtrim(number_format($taxPercent, 2), '0'), '.')) ?>%)</span><span id="sumTax">—</span></div>
+                <div class="flex justify-between text-sm mb-1"><span>Before VAT</span><span id="sumNet">—</span></div>
+                <div class="flex justify-between text-sm mb-1"><span>VAT <?= e(vat_label($taxPercent)) ?></span><span id="sumTax">—</span></div>
             <?php endif; ?>
-            <div class="total-row grand"><span>Total</span><span id="sumTotal">—</span></div>
+            <div class="flex justify-between text-xl font-bold text-brand-dark my-2">
+                <span>Total</span><span id="sumTotal">—</span>
+            </div>
 
             <?php if ($canCharge): ?>
-                <div class="row g-2 mb-2">
-                    <div class="col-6">
-                        <select id="payMethod" class="form-select form-select-sm">
-                            <option value="cash">Cash</option>
-                            <option value="mobile">Mobile money</option>
-                            <option value="card">Card</option>
-                        </select>
-                    </div>
-                    <div class="col-6">
-                        <input type="number" id="paidAmount" class="form-control form-control-sm text-end"
-                               placeholder="Amount paid" min="0" step="0.01">
-                    </div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <select id="payMethod" class="select text-sm">
+                        <option value="cash">Cash</option>
+                        <option value="mobile">Mobile money</option>
+                        <option value="card">Card</option>
+                    </select>
+                    <input type="number" id="paidAmount" class="input text-right text-sm"
+                           placeholder="Amount paid" min="0" step="0.01">
                 </div>
-                <div class="total-row"><span>Change</span><strong id="changeDue">—</strong></div>
+                <div class="flex justify-between text-sm mb-2">
+                    <span>Change</span><strong id="changeDue">—</strong>
+                </div>
             <?php endif; ?>
 
-            <div class="d-grid gap-2 mt-2">
+            <div class="flex flex-col gap-2 mt-2">
                 <?php if ($canCharge): ?>
-                    <button class="btn btn-lg text-white" style="background:var(--ok)" id="btnCharge"
-                            <?= $shift ? '' : 'disabled' ?>>Charge &amp; Print</button>
+                    <button class="btn btn-ok btn-lg" id="btnCharge"
+                            <?= $shift ? '' : 'disabled' ?>><?= $editOrder ? 'Add & Charge' : 'Charge & Print' ?></button>
                 <?php endif; ?>
-                <button class="btn btn-outline-secondary" id="btnHold">Send to Kitchen (unpaid)</button>
+                <button class="btn btn-outline" id="btnHold">
+                    <?= $editOrder ? 'Add to order (send to kitchen)' : 'Send to Kitchen (unpaid)' ?>
+                </button>
             </div>
         </div>
     </div>
@@ -121,7 +167,10 @@ window.POS = {
     hasShift:   <?= $shift ? 'true' : 'false' ?>,
     csrf:       <?= json_encode(csrf_token()) ?>,
     saveUrl:    <?= json_encode(url('public/api/order_save.php')) ?>,
-    receiptUrl: <?= json_encode(url('public/receipt.php')) ?>
+    lineUrl:    <?= json_encode(url('public/api/order_line_update.php')) ?>,
+    receiptUrl: <?= json_encode(url('public/receipt.php')) ?>,
+    ordersUrl:  <?= json_encode(url('public/orders.php')) ?>,
+    editOrder:  <?= json_encode($editOrder, JSON_UNESCAPED_UNICODE) ?>
 };
 </script>
 <?php

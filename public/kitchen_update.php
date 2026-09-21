@@ -19,11 +19,11 @@ $itemId  = (int)($_POST['item_id'] ?? 0);
 $orderId = (int)($_POST['order_id'] ?? 0);
 
 if ($itemId > 0) {
-    db_exec('UPDATE order_items SET kitchen_status = ? WHERE id = ?', [$to, $itemId]);
+    db_exec('UPDATE order_items SET kitchen_status = ? WHERE id = ? AND company_id = ?', [$to, $itemId, company_id()]);
 } elseif ($orderId > 0) {
     db_exec(
-        'UPDATE order_items SET kitchen_status = ? WHERE order_id = ? AND needs_prep = 1',
-        [$to, $orderId]
+        'UPDATE order_items SET kitchen_status = ? WHERE order_id = ? AND company_id = ? AND needs_prep = 1',
+        [$to, $orderId, company_id()]
     );
     flash('Order marked ' . $to . '.');
 } else {

@@ -7,11 +7,26 @@
 
 declare(strict_types=1);
 
+
+
+
 // ---------------------------------------------------------------- database
 const DB_HOST = 'localhost';
 const DB_USER = 'root';
 const DB_PASS = '';
-const DB_NAME = 'smallrest';
+// The test runner (tests/run_all.sh) serves the app from PHP's built-in server
+// against a throwaway copy. The override is honoured ONLY under that server,
+// so Apache — the real till — can never be pointed at another database.
+define('DB_NAME', PHP_SAPI === 'cli-server' && getenv('SMALLREST_DB')
+    ? (string)getenv('SMALLREST_DB')
+    : 'smallrest');
+
+// ---------------------------------------------------------------- sign-up
+// A newly registered restaurant starts on this plan (plans.id) for this many days.
+const TRIAL_PLAN_ID = 1;
+const TRIAL_DAYS    = 14;
+// Shown on every restaurant's Billing page: how to pay the platform owner.
+const PLATFORM_PAY_INFO = 'Pay by mobile money to the platform owner, then send the transaction reference. Your plan is extended as soon as the payment is recorded.';
 
 // ---------------------------------------------------------------- runtime
 date_default_timezone_set('Africa/Mogadishu');
@@ -43,12 +58,17 @@ $prefix  = ($docRoot !== '' && str_starts_with($appRoot, $docRoot))
     : '';
 define('BASE_URL', rtrim($prefix, '/'));
 
-// ---------------------------------------------------------------- settings
-/** @var array<string,string> $SETTINGS shop-level config from the settings table */
-$SETTINGS = [];
-foreach ($conn->query('SELECT setting_key, setting_value FROM settings') as $row) {
-    $SETTINGS[$row['setting_key']] = (string)$row['setting_value'];
-}
-
 require_once __DIR__ . '/helper_functions.php';
 require_once __DIR__ . '/sessions.php';
+
+// ---------------------------------------------------------------- settings
+/**
+ * @var array<string,string> $SETTINGS the signed-in company's shop config.
+ * Empty before login (login/register pages), so setting() falls back to its defaults.
+ */
+$SETTINGS = [];
+if (company_id() > 0) {
+    foreach (db_all('SELECT setting_key, setting_value FROM settings WHERE company_id = ?', [company_id()]) as $row) {
+        $SETTINGS[$row['setting_key']] = (string)$row['setting_value'];
+    }
+}
