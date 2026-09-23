@@ -23,54 +23,57 @@ $payments = db_all(
 $plans = db_all('SELECT * FROM plans WHERE is_active = 1 ORDER BY sort_order, price_month');
 
 $statusLabel = match (true) {
-    $access === 'suspended'     => ['Suspended', 'badge-danger'],
-    $access !== 'ok'            => ['Expired', 'badge-danger'],
-    $c['status'] === 'trial'    => ['Free trial', 'badge-warning'],
-    default                     => ['Active', 'badge-success'],
+    $access === 'suspended'     => [__('st.suspended'), 'badge-danger'],
+    $access !== 'ok'            => [__('st.expired'), 'badge-danger'],
+    $c['status'] === 'trial'    => [__('bl.free_trial'), 'badge-warning'],
+    default                     => [__('st.active'), 'badge-success'],
 };
 
-$pageTitle = 'Billing';
+$pageTitle = __('nav.billing');
 require __DIR__ . '/../core/header.php';
 ?>
 
 <?php if ($access !== 'ok'): ?>
-    <div class="flash-danger"><?= e(company_block_message($access)) ?> Staff cannot sign in until it is renewed.</div>
+    <div class="flash-danger"><?= e(company_block_message($access)) ?> <?= e(__('bl.staff_blocked')) ?></div>
 <?php elseif ($term['days'] !== null && $term['days'] <= 5): ?>
-    <div class="flash-warning">Your <?= $c['status'] === 'trial' ? 'free trial' : 'subscription' ?> ends in
-        <?= $term['days'] ?> day(s), on <?= e(dt($term['until'], 'd M Y')) ?>.</div>
+    <div class="flash-warning"><?= e(__('bl.ends_on', '', [
+        'type' => $c['status'] === 'trial' ? __('dash.trial') : __('dash.subscription'),
+        'days' => $term['days'],
+        'date' => dt($term['until'], 'd M Y'),
+    ])) ?></div>
 <?php endif; ?>
 
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
     <div class="stat-card accent">
-        <div class="label">Plan</div>
+        <div class="label"><?= e(__('pf.plan')) ?></div>
         <div class="value"><?= e($c['plan_name']) ?></div>
-        <small class="text-muted text-xs"><?= money($c['price_month']) ?> / month</small>
+        <small class="text-muted text-xs"><?= e(__('bl.per_month', '', ['price' => money($c['price_month'])])) ?></small>
     </div>
     <div class="stat-card <?= $access === 'ok' ? 'good' : 'bad' ?>">
-        <div class="label">Status</div>
-        <div class="value"><span class="badge <?= $statusLabel[1] ?>"><?= $statusLabel[0] ?></span></div>
+        <div class="label"><?= e(__('lbl.status')) ?></div>
+        <div class="value"><span class="badge <?= $statusLabel[1] ?>"><?= e($statusLabel[0]) ?></span></div>
         <small class="text-muted text-xs">
-            <?= $term['until'] === null ? 'no expiry date' : 'until ' . e(dt($term['until'], 'd M Y')) ?>
+            <?= e($term['until'] === null ? __('pc.no_expiry_date') : __('bl.until', '', ['date' => dt($term['until'], 'd M Y')])) ?>
         </small>
     </div>
     <div class="stat-card">
-        <div class="label">Active users</div>
+        <div class="label"><?= e(__('bl.active_users')) ?></div>
         <div class="value"><?= $users ?> <span class="text-base text-muted">/ <?= $c['max_users'] === null ? '∞' : (int)$c['max_users'] ?></span></div>
-        <small class="text-muted text-xs">allowed by your plan</small>
+        <small class="text-muted text-xs"><?= e(__('bl.allowed')) ?></small>
     </div>
     <div class="stat-card">
-        <div class="label">Menu items</div>
+        <div class="label"><?= e(__('nav.menu_items')) ?></div>
         <div class="value"><?= $items ?> <span class="text-base text-muted">/ <?= $c['max_menu_items'] === null ? '∞' : (int)$c['max_menu_items'] ?></span></div>
-        <small class="text-muted text-xs">allowed by your plan</small>
+        <small class="text-muted text-xs"><?= e(__('bl.allowed')) ?></small>
     </div>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
     <div class="card">
-        <div class="card-header">Payments</div>
+        <div class="card-header"><?= e(__('pc.payments')) ?></div>
         <table class="tbl">
             <thead><tr>
-                <th>Date</th><th>Plan</th><th>Period</th><th>Method</th><th>Reference</th><th class="text-right">Amount</th>
+                <th><?= e(__('lbl.date')) ?></th><th><?= e(__('pf.plan')) ?></th><th><?= e(__('pc.period')) ?></th><th><?= e(__('pc.method')) ?></th><th><?= e(__('pc.reference')) ?></th><th class="text-right"><?= e(__('lbl.amount')) ?></th>
             </tr></thead>
             <tbody>
             <?php foreach ($payments as $p): ?>
@@ -78,13 +81,13 @@ require __DIR__ . '/../core/header.php';
                     <td class="text-nowrap"><?= dt($p['created_at'], 'd M Y') ?></td>
                     <td><?= e($p['plan_name']) ?></td>
                     <td class="text-nowrap"><?= dt($p['period_from'], 'd M Y') ?> – <?= dt($p['period_to'], 'd M Y') ?></td>
-                    <td><?= e(ucfirst($p['method'])) ?></td>
+                    <td><?= e(__('pay.' . $p['method'], ucfirst($p['method']))) ?></td>
                     <td class="text-muted"><?= e($p['reference'] ?? '') ?></td>
                     <td class="text-right"><?= money($p['amount']) ?></td>
                 </tr>
             <?php endforeach; ?>
             <?php if (!$payments): ?>
-                <tr><td colspan="6" class="text-center text-muted py-8">No payments recorded yet.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-8"><?= e(__('bl.no_payments')) ?></td></tr>
             <?php endif; ?>
             </tbody>
         </table>
@@ -92,20 +95,22 @@ require __DIR__ . '/../core/header.php';
 
     <div class="flex flex-col gap-3">
         <div class="card">
-            <div class="card-header">How to pay</div>
+            <div class="card-header"><?= e(__('bl.how_to_pay')) ?></div>
             <div class="card-body text-sm"><?= e(PLATFORM_PAY_INFO) ?></div>
         </div>
         <div class="card">
-            <div class="card-header">Plans</div>
+            <div class="card-header"><?= e(__('pf.plans')) ?></div>
             <ul class="divide-y divide-line">
                 <?php foreach ($plans as $p): ?>
                     <li class="px-4 py-3 text-sm <?= (int)$p['id'] === (int)$c['plan_id'] ? 'bg-brand-light' : '' ?>">
                         <div class="flex justify-between font-semibold">
-                            <span><?= e($p['name']) ?></span><span><?= money($p['price_month']) ?>/mo</span>
+                            <span><?= e($p['name']) ?></span><span><?= money($p['price_month']) ?><?= e(__('pc.per_month_short')) ?></span>
                         </div>
                         <div class="text-muted text-xs">
-                            <?= $p['max_users'] === null ? 'Unlimited' : (int)$p['max_users'] ?> users ·
-                            <?= $p['max_menu_items'] === null ? 'unlimited' : (int)$p['max_menu_items'] ?> menu items
+                            <?= e(__('bl.plan_limits', '', [
+                                'users' => $p['max_users'] === null ? __('lbl.unlimited') : (int)$p['max_users'],
+                                'items' => $p['max_menu_items'] === null ? __('lbl.unlimited') : (int)$p['max_menu_items'],
+                            ])) ?>
                         </div>
                     </li>
                 <?php endforeach; ?>

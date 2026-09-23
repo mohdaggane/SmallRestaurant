@@ -20,17 +20,17 @@ $paid    = post_amount('paid_amount');
 $order = db_one('SELECT * FROM orders WHERE id = ? AND company_id = ?', [$orderId, company_id()]);
 
 if (!$order) {
-    flash('That order no longer exists.', 'danger');
+    flash(__('msg.order_gone'), 'danger');
     redirect('public/orders.php');
 }
 if ($order['status'] !== 'open') {
-    flash('Order ' . $order['order_no'] . ' is already ' . $order['status'] . '.', 'warning');
+    flash(__('msg.order_already', '', ['no' => $order['order_no'], 'status' => mb_strtolower(__('ost.' . $order['status'], $order['status']))]), 'warning');
     redirect('public/orders.php');
 }
 
 $shift = open_shift(user_id());
 if (!$shift) {
-    flash('Open your cash drawer shift before taking payment.', 'warning');
+    flash(__('msg.open_shift'), 'warning');
     redirect('admin/shifts.php');
 }
 
@@ -41,5 +41,5 @@ try {
     redirect('public/orders.php');
 }
 
-flash('Order ' . $order['order_no'] . ' paid. Change ' . money($change) . '.');
+flash(__('msg.paid', '', ['no' => $order['order_no'], 'change' => money($change)]));
 redirect('public/receipt.php?id=' . $orderId . '&print=1');

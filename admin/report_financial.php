@@ -53,7 +53,7 @@ $grossProfit = round($netSales - $cogs, 2);
 $expenses    = round(array_sum(array_map(fn($r) => (float)$r['total'], $expByCat)), 2);
 $netProfit   = round($grossProfit - $expenses, 2);
 $pct = static fn(float $part, float $whole): string =>
-    $whole > 0 ? number_format($part / $whole * 100, 1) . '%' : 'â€”';
+    $whole > 0 ? number_format($part / $whole * 100, 1) . '%' : '—';
 
 // ---------------------------------------------------------------- VAT account
 // Taxable sales and VAT per rate â€” the figures a VAT return asks for. Each
@@ -177,35 +177,35 @@ if (get('export') === 'csv') {
     csv_out("financial_{$from}_to_{$to}.csv", ["Profit & loss {$from} to {$to}", 'Amount'], $rows);
 }
 
-$pageTitle  = 'Reports · Financial';
+$pageTitle  = __('rf.title');
 $reportTab  = 'financial';
 $filterMode = 'range';
 require __DIR__ . '/../core/header.php';
 require __DIR__ . '/_report_tabs.php';
 ?>
 
-<h2 class="text-xl font-bold mb-4">Profit &amp; loss · <?= dt($from, 'd M Y') ?> to <?= dt($to, 'd M Y') ?></h2>
+<h2 class="text-xl font-bold mb-4"><?= e(__('rf.heading', '', ['from' => dt($from, 'd M Y'), 'to' => dt($to, 'd M Y')])) ?></h2>
 
 <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
     <div class="stat-card accent">
-        <div class="label">Net sales</div><div class="value"><?= money($netSales) ?></div>
-        <small class="text-xs text-muted block mt-1">before VAT · <?= (int)$s['orders'] ?> paid order(s)</small>
+        <div class="label"><?= e(__('rf.net_sales')) ?></div><div class="value"><?= money($netSales) ?></div>
+        <small class="text-xs text-muted block mt-1"><?= e(__('rf.before_vat_n', '', ['n' => (int)$s['orders']])) ?></small>
     </div>
     <div class="stat-card">
-        <div class="label">VAT collected</div><div class="value"><?= money($tax) ?></div>
-        <small class="text-xs text-muted block mt-1">owed to the government</small>
+        <div class="label"><?= e(__('sa.vat_collected')) ?></div><div class="value"><?= money($tax) ?></div>
+        <small class="text-xs text-muted block mt-1"><?= e(__('rd.owed_gov')) ?></small>
     </div>
     <div class="stat-card good">
-        <div class="label">Gross profit</div><div class="value"><?= money($grossProfit) ?></div>
-        <small class="text-xs text-muted block mt-1">margin <?= $pct($grossProfit, $netSales) ?></small>
+        <div class="label"><?= e(__('rp.gross_profit')) ?></div><div class="value"><?= money($grossProfit) ?></div>
+        <small class="text-xs text-muted block mt-1"><?= e(__('rf.margin', '', ['pct' => $pct($grossProfit, $netSales)])) ?></small>
     </div>
     <div class="stat-card bad">
-        <div class="label">Expenses</div><div class="value"><?= money($expenses) ?></div>
-        <small class="text-xs text-muted block mt-1"><?= count($expByCat) ?> categor<?= count($expByCat) === 1 ? 'y' : 'ies' ?></small>
+        <div class="label"><?= e(__('nav.expenses')) ?></div><div class="value"><?= money($expenses) ?></div>
+        <small class="text-xs text-muted block mt-1"><?= e(__('rf.n_cats', '', ['n' => count($expByCat)])) ?></small>
     </div>
     <div class="stat-card <?= $netProfit >= 0 ? 'good' : 'bad' ?>">
-        <div class="label">Net profit</div><div class="value"><?= money($netProfit) ?></div>
-        <small class="text-xs text-muted block mt-1">margin <?= $pct($netProfit, $netSales) ?></small>
+        <div class="label"><?= e(__('rp.net_profit')) ?></div><div class="value"><?= money($netProfit) ?></div>
+        <small class="text-xs text-muted block mt-1"><?= e(__('rf.margin', '', ['pct' => $pct($netProfit, $netSales)])) ?></small>
     </div>
 </div>
 
@@ -213,31 +213,29 @@ require __DIR__ . '/_report_tabs.php';
     <!-- ------------------------------------------------ statement -->
     <div class="lg:col-span-7">
         <div class="card h-full">
-            <div class="card-header">Statement</div>
+            <div class="card-header"><?= e(__('rf.statement')) ?></div>
             <table class="tbl pl-table">
-                <tr><td>Gross sales</td><td class="text-right"><?= money($gross) ?></td><td></td></tr>
-                <tr><td class="pl-4 text-muted">Less discounts</td><td class="text-right text-muted">(<?= money($discount) ?>)</td><td></td></tr>
-                <tr class="subtotal"><td><strong>Net sales</strong></td><td class="text-right"><strong><?= money($netSales) ?></strong></td><td class="text-right text-muted">100%</td></tr>
-                <tr><td class="pl-4 text-muted">Less cost of goods sold</td><td class="text-right text-muted">(<?= money($cogs) ?>)</td><td class="text-right text-muted"><?= $pct($cogs, $netSales) ?></td></tr>
-                <tr class="subtotal"><td><strong>Gross profit</strong></td><td class="text-right"><strong><?= money($grossProfit) ?></strong></td><td class="text-right text-muted"><?= $pct($grossProfit, $netSales) ?></td></tr>
+                <tr><td><?= e(__('rf.gross_sales')) ?></td><td class="text-right"><?= money($gross) ?></td><td></td></tr>
+                <tr><td class="pl-4 text-muted"><?= e(__('rf.less_disc')) ?></td><td class="text-right text-muted">(<?= money($discount) ?>)</td><td></td></tr>
+                <tr class="subtotal"><td><strong><?= e(__('rf.net_sales')) ?></strong></td><td class="text-right"><strong><?= money($netSales) ?></strong></td><td class="text-right text-muted">100%</td></tr>
+                <tr><td class="pl-4 text-muted"><?= e(__('rf.less_cogs')) ?></td><td class="text-right text-muted">(<?= money($cogs) ?>)</td><td class="text-right text-muted"><?= $pct($cogs, $netSales) ?></td></tr>
+                <tr class="subtotal"><td><strong><?= e(__('rp.gross_profit')) ?></strong></td><td class="text-right"><strong><?= money($grossProfit) ?></strong></td><td class="text-right text-muted"><?= $pct($grossProfit, $netSales) ?></td></tr>
                 <?php foreach ($expByCat as $x): ?>
-                    <tr><td class="pl-4 text-muted">Less <?= e($x['category']) ?></td>
+                    <tr><td class="pl-4 text-muted"><?= e(__('rf.less_x', '', ['name' => __('expcat.' . $x['category'], $x['category'])])) ?></td>
                         <td class="text-right text-muted">(<?= money($x['total']) ?>)</td>
                         <td class="text-right text-muted"><?= $pct((float)$x['total'], $netSales) ?></td></tr>
                 <?php endforeach; ?>
                 <?php if (!$expByCat): ?>
-                    <tr><td class="pl-4 text-muted">No expenses recorded</td><td class="text-right text-muted">—</td><td></td></tr>
+                    <tr><td class="pl-4 text-muted"><?= e(__('rf.no_exp')) ?></td><td class="text-right text-muted">—</td><td></td></tr>
                 <?php endif; ?>
                 <tr class="grand <?= $netProfit < 0 ? 'loss' : '' ?>">
-                    <td><strong>Net profit</strong></td>
+                    <td><strong><?= e(__('rp.net_profit')) ?></strong></td>
                     <td class="text-right"><strong><?= money($netProfit) ?></strong></td>
                     <td class="text-right"><?= $pct($netProfit, $netSales) ?></td>
                 </tr>
             </table>
             <div class="card-body text-xs text-muted pt-2">
-                All figures are before VAT. VAT (<?= money($tax) ?>) is added on top of prices,
-                belongs to the government, and is reported separately in the VAT account.
-                Cost of goods uses each item's cost price at the moment it was sold.
+                <?= e(__('rf.note', '', ['vat' => money($tax)])) ?>
             </div>
         </div>
     </div>
@@ -245,54 +243,54 @@ require __DIR__ . '/_report_tabs.php';
     <!-- ------------------------------------------------ VAT, collections & controls -->
     <div class="lg:col-span-5 flex flex-col gap-4">
         <div class="card">
-            <div class="card-header">VAT account</div>
+            <div class="card-header"><?= e(__('rf.vat_account')) ?></div>
             <table class="tbl">
-                <thead><tr><th>Rate</th><th class="text-right">Orders</th>
-                    <th class="text-right">Sales taxed</th><th class="text-right">VAT</th></tr></thead>
+                <thead><tr><th><?= e(__('rf.rate')) ?></th><th class="text-right"><?= e(__('lbl.orders')) ?></th>
+                    <th class="text-right"><?= e(__('rf.sales_taxed')) ?></th><th class="text-right"><?= e(__('lbl.vat')) ?></th></tr></thead>
                 <tbody>
                 <?php foreach ($vatByRate as $v): ?>
                     <tr>
-                        <td><?= e(vat_label($v['vat_rate'])) ?><?= (float)$v['vat_rate'] == 0 ? ' <small class="text-muted">(no VAT)</small>' : '' ?></td>
+                        <td><?= e(vat_label($v['vat_rate'])) ?><?= (float)$v['vat_rate'] == 0 ? ' <small class="text-muted">' . e(__('rf.no_vat')) . '</small>' : '' ?></td>
                         <td class="text-right"><?= (int)$v['orders'] ?></td>
                         <td class="text-right"><?= money($v['taxable']) ?></td>
                         <td class="text-right"><?= money($v['vat']) ?></td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (!$vatByRate): ?>
-                    <tr><td colspan="4" class="text-center text-muted py-3">No paid orders in this period.</td></tr>
+                    <tr><td colspan="4" class="text-center text-muted py-3"><?= e(__('rp.no_paid')) ?></td></tr>
                 <?php endif; ?>
                 </tbody>
                 <tfoot>
-                    <tr class="bg-brand-light/50"><th colspan="3">VAT collected — owed to the government</th>
+                    <tr class="bg-brand-light/50"><th colspan="3"><?= e(__('rf.vat_owed')) ?></th>
                         <th class="text-right"><?= money($tax) ?></th></tr>
                 </tfoot>
             </table>
         </div>
 
         <div class="card">
-            <div class="card-header">Money collected</div>
+            <div class="card-header"><?= e(__('rf.money_collected')) ?></div>
             <table class="tbl">
-                <tr><td>Cash</td><td class="text-right"><?= money($methods['cash']) ?></td></tr>
-                <tr><td>Mobile money</td><td class="text-right"><?= money($methods['mobile']) ?></td></tr>
-                <tr><td>Card</td><td class="text-right"><?= money($methods['card']) ?></td></tr>
-                <tr class="bg-brand-light/50"><th>Total collected</th><th class="text-right"><?= money($s['collected']) ?></th></tr>
+                <tr><td><?= e(__('pay.cash')) ?></td><td class="text-right"><?= money($methods['cash']) ?></td></tr>
+                <tr><td><?= e(__('pay.mobile')) ?></td><td class="text-right"><?= money($methods['mobile']) ?></td></tr>
+                <tr><td><?= e(__('pay.card')) ?></td><td class="text-right"><?= money($methods['card']) ?></td></tr>
+                <tr class="bg-brand-light/50"><th><?= e(__('sa.total_collected')) ?></th><th class="text-right"><?= money($s['collected']) ?></th></tr>
             </table>
-            <div class="card-body text-xs text-muted pt-2">= net sales <?= money($netSales) ?> + VAT <?= money($tax) ?></div>
+            <div class="card-body text-xs text-muted pt-2"><?= e(__('rf.collected_eq', '', ['net' => money($netSales), 'vat' => money($tax)])) ?></div>
         </div>
 
         <div class="card">
-            <div class="card-header">Controls</div>
+            <div class="card-header"><?= e(__('rf.controls')) ?></div>
             <table class="tbl">
                 <tr>
-                    <td>Drawer difference<br><small class="text-muted"><?= (int)$variance['n'] ?> closed shift(s)</small></td>
+                    <td><?= e(__('rf.drawer_diff')) ?><br><small class="text-muted"><?= e(__('rf.closed_shifts', '', ['n' => (int)$variance['n']])) ?></small></td>
                     <td class="text-right font-bold <?= abs((float)$variance['total']) < 0.005 ? 'text-ok' : 'text-bad' ?>">
                         <?= ((float)$variance['total'] > 0 ? '+' : '') . money($variance['total']) ?>
-                        <?php if ((float)$variance['short'] < 0): ?><br><small>short <?= money(abs((float)$variance['short'])) ?></small><?php endif; ?>
+                        <?php if ((float)$variance['short'] < 0): ?><br><small><?= e(__('rf.short', '', ['amount' => money(abs((float)$variance['short']))])) ?></small><?php endif; ?>
                     </td>
                 </tr>
-                <tr><td>Voided orders<br><small class="text-muted"><?= (int)$voids['n'] ?> order(s)</small></td>
+                <tr><td><?= e(__('rf.voided')) ?><br><small class="text-muted"><?= e(__('rp.n_orders', '', ['n' => (int)$voids['n']])) ?></small></td>
                     <td class="text-right"><?= money($voids['total']) ?></td></tr>
-                <tr><td>Unpaid bills still open<br><small class="text-muted"><?= (int)$unpaid['n'] ?> bill(s) · <a class="text-brand hover:underline" href="<?= url('admin/report_unpaid.php') ?>">see all</a></small></td>
+                <tr><td><?= e(__('rf.unpaid_open')) ?><br><small class="text-muted"><?= e(__('ru.n_bills', '', ['n' => (int)$unpaid['n']])) ?> · <a class="text-brand hover:underline" href="<?= url('admin/report_unpaid.php') ?>"><?= e(__('rd.see_all')) ?></a></small></td>
                     <td class="text-right font-bold <?= (float)$unpaid['total'] > 0 ? 'text-bad' : '' ?>"><?= money($unpaid['total']) ?></td></tr>
             </table>
         </div>
@@ -301,12 +299,12 @@ require __DIR__ . '/_report_tabs.php';
 
 <!-- ------------------------------------------------ daily P&L -->
 <div class="card">
-    <div class="card-header">Profit and loss by day</div>
+    <div class="card-header"><?= e(__('rf.by_day')) ?></div>
     <div class="overflow-x-auto">
         <table class="tbl">
-            <thead><tr><th>Date</th><th class="text-right">Orders</th><th class="text-right">Net sales</th>
-                <th class="text-right">VAT</th><th class="text-right">Cost</th><th class="text-right">Gross profit</th>
-                <th class="text-right">Expenses</th><th class="text-right">Net profit</th></tr></thead>
+            <thead><tr><th><?= e(__('lbl.date')) ?></th><th class="text-right"><?= e(__('lbl.orders')) ?></th><th class="text-right"><?= e(__('rf.net_sales')) ?></th>
+                <th class="text-right"><?= e(__('lbl.vat')) ?></th><th class="text-right"><?= e(__('mi.cost')) ?></th><th class="text-right"><?= e(__('rp.gross_profit')) ?></th>
+                <th class="text-right"><?= e(__('nav.expenses')) ?></th><th class="text-right"><?= e(__('rp.net_profit')) ?></th></tr></thead>
             <tbody>
             <?php foreach ($days as $d => $r): $gp = $r['net_sales'] - $r['cost']; $np = $gp - $r['expenses']; ?>
                 <tr>
@@ -321,13 +319,13 @@ require __DIR__ . '/_report_tabs.php';
                 </tr>
             <?php endforeach; ?>
             <?php if (!$days): ?>
-                <tr><td colspan="8" class="text-center text-muted py-4">No sales or expenses in this period.</td></tr>
+                <tr><td colspan="8" class="text-center text-muted py-4"><?= e(__('rf.no_data')) ?></td></tr>
             <?php endif; ?>
             </tbody>
             <?php if ($days): ?>
             <tfoot>
                 <tr class="bg-brand-light/50">
-                    <th>Total</th><th class="text-right"><?= (int)$s['orders'] ?></th>
+                    <th><?= e(__('lbl.total')) ?></th><th class="text-right"><?= (int)$s['orders'] ?></th>
                     <th class="text-right"><?= money($netSales) ?></th><th class="text-right"><?= money($tax) ?></th>
                     <th class="text-right"><?= money($cogs) ?></th>
                     <th class="text-right"><?= money($grossProfit) ?></th><th class="text-right"><?= money($expenses) ?></th>

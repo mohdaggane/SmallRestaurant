@@ -17,11 +17,11 @@ $reason  = mb_substr(post('reason', 'Voided by administrator'), 0, 255);
 $order   = db_one('SELECT * FROM orders WHERE id = ? AND company_id = ?', [$orderId, company_id()]);
 
 if (!$order) {
-    flash('That order no longer exists.', 'danger');
+    flash(__('msg.order_gone'), 'danger');
     redirect('public/orders.php');
 }
 if ($order['status'] === 'void') {
-    flash('Order ' . $order['order_no'] . ' is already void.', 'warning');
+    flash(__('msg.already_void', '', ['no' => $order['order_no']]), 'warning');
     redirect('public/orders.php');
 }
 
@@ -30,7 +30,7 @@ db_exec(
     [$reason, $orderId, company_id()]
 );
 
-flash('Order ' . $order['order_no'] . ' has been voided.', 'warning');
+flash(__('msg.voided', '', ['no' => $order['order_no']]), 'warning');
 
 // Only return to a page we actually link this form from — never an arbitrary URL.
 $allowedBack = ['public/orders.php', 'admin/sales.php'];

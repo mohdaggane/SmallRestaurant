@@ -22,9 +22,9 @@ if (is_post()) {
     // Simple throttle: 5 failures locks the form for 60 seconds.
     $lockedUntil = (int)($_SESSION['login_locked_until'] ?? 0);
     if ($lockedUntil > time()) {
-        $error = 'Too many failed attempts. Try again in ' . ($lockedUntil - time()) . ' seconds.';
+        $error = __('auth.err_locked', '', ['s' => $lockedUntil - time()]);
     } elseif ($username === '' || $password === '') {
-        $error = 'Enter both a username and a password.';
+        $error = __('auth.err_empty');
     } else {
         $user = db_one(
             'SELECT u.*, c.name AS company_name, c.status AS company_status, c.trial_ends_at, c.paid_until
@@ -40,7 +40,7 @@ if (is_post()) {
         ]) : 'ok';
 
         if ($user && !(int)$user['is_active']) {
-            $error = 'That account has been disabled. Ask the administrator.';
+            $error = __('auth.err_disabled');
         } elseif ($user && password_verify($password, $user['password_hash'])
                   && $access !== 'ok' && ($user['role'] !== 'admin' || $access === 'suspended')) {
             // Blocked company: staff stay out; the admin (below) is let in to the billing page.
@@ -49,7 +49,7 @@ if (is_post()) {
         } elseif ($user && password_verify($password, $user['password_hash'])) {
             unset($_SESSION['login_fails'], $_SESSION['login_locked_until']);
             login_user($user);
-            flash('Welcome back, ' . $user['full_name'] . '.');
+            flash(__('auth.welcome', '', ['name' => $user['full_name']]));
             $back = $_SESSION['redirect_after_login'] ?? '';
             unset($_SESSION['redirect_after_login']);
             if ($access !== 'ok') {
@@ -65,14 +65,20 @@ if (is_post()) {
                 $_SESSION['login_locked_until'] = time() + 60;
                 $_SESSION['login_fails'] = 0;
             }
-            $error = 'Wrong username or password.';
+            $error = __('auth.err_wrong');
         }
     }
 }
 
-$pageTitle = 'Sign in';
+$pageTitle = __('auth.sign_in');
 $layout    = 'blank';
 require __DIR__ . '/../core/header.php';
+
+$companyName = platform_setting('company_name', 'SAHAN ICT');
+$systemName  = platform_setting('system_name', 'Restaurant POS');
+$webName     = platform_setting('web_name', 'sahanict.org');
+$webUrl      = platform_setting('web_url', 'https://sahanict.org');
+$logoUrl     = platform_logo_url();
 ?>
 <style>
     :root {
@@ -117,15 +123,19 @@ require __DIR__ . '/../core/header.php';
         <!-- Top Navigation / Logo -->
         <div class="flex items-center justify-between mb-6">
             <a href="<?= url('') ?>" class="flex items-center gap-2.5 no-underline group">
-                <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-md text-white group-hover:shadow-lg transition-shadow" style="background: linear-gradient(135deg, var(--sn), var(--sb));">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                        <path d="M17 6s-2-2-5-2-5 1.8-5 4c0 2.5 2.5 3.5 5 4.5s5 2 5 4.5c0 2.2-2 3-5 3s-5-2-5-2"
-                              stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
-                    </svg>
-                </div>
+                <?php if ($logoUrl !== ''): ?>
+                    <img src="<?= e($logoUrl) ?>" alt="Logo" class="w-10 h-10 rounded-xl object-contain shadow-sm bg-white p-1 border border-slate-200">
+                <?php else: ?>
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shadow-md text-white group-hover:shadow-lg transition-shadow" style="background: linear-gradient(135deg, var(--sn), var(--sb));">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                            <path d="M17 6s-2-2-5-2-5 1.8-5 4c0 2.5 2.5 3.5 5 4.5s5 2 5 4.5c0 2.2-2 3-5 3s-5-2-5-2"
+                                  stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                <?php endif; ?>
                 <div>
-                    <div class="font-black text-[15px] tracking-tight" style="color:var(--sn);">SAHAN ICT</div>
-                    <div class="text-[10px] font-bold tracking-widest uppercase" style="color:var(--sb);">Restaurant POS</div>
+                    <div class="font-black text-[15px] tracking-tight" style="color:var(--sn);"><?= e($companyName) ?></div>
+                    <div class="text-[10px] font-bold tracking-widest uppercase" style="color:var(--sb);"><?= e($systemName) ?></div>
                 </div>
             </a>
 
@@ -134,7 +144,7 @@ require __DIR__ . '/../core/header.php';
                     <line x1="19" y1="12" x2="5" y2="12"></line>
                     <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
-                <span>Back to Home</span>
+                <span><?= e(__('auth.back_home')) ?></span>
             </a>
         </div>
 
@@ -144,10 +154,10 @@ require __DIR__ . '/../core/header.php';
             <!-- Header Title -->
             <div class="mb-6">
                 <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
-                    Sign in to Station
+                    <?= e(__('auth.login_title')) ?>
                 </h1>
                 <p class="text-slate-500 text-sm leading-relaxed">
-                    Enter your staff or administrator credentials to open your terminal session.
+                    <?= e(__('auth.login_sub')) ?>
                 </p>
             </div>
 
@@ -170,7 +180,7 @@ require __DIR__ . '/../core/header.php';
                 <!-- Username Field -->
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2" for="login_username">
-                        Username
+                        <?= e(__('auth.username')) ?>
                     </label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
@@ -183,7 +193,7 @@ require __DIR__ . '/../core/header.php';
                                id="login_username"
                                name="username"
                                class="input-field block w-full pl-10 pr-4 py-3 bg-slate-50 hover:bg-slate-100/60 focus:bg-white text-slate-900 text-sm font-medium rounded-xl border border-slate-200 outline-none transition"
-                               placeholder="e.g. admin or cashier.one"
+                               placeholder="<?= e(__('auth.username_ph')) ?>"
                                value="<?= e($username) ?>"
                                autofocus
                                required>
@@ -194,9 +204,9 @@ require __DIR__ . '/../core/header.php';
                 <div>
                     <div class="flex items-center justify-between mb-2">
                         <label class="block text-xs font-bold uppercase tracking-wider text-slate-700" for="login_password">
-                            Password
+                            <?= e(__('auth.password')) ?>
                         </label>
-                        <span class="text-xs text-slate-400">Staff passkey</span>
+                        <span class="text-xs text-slate-400"><?= e(__('auth.passkey')) ?></span>
                     </div>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
@@ -214,7 +224,7 @@ require __DIR__ . '/../core/header.php';
                         <button type="button"
                                 id="togglePassword"
                                 class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 transition"
-                                aria-label="Toggle password visibility">
+                                aria-label="<?= e(__('auth.toggle_pw')) ?>">
                             <svg id="eyeOpen" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
@@ -230,7 +240,7 @@ require __DIR__ . '/../core/header.php';
                 <!-- Sign In Submit Button -->
                 <button type="submit"
                         class="btn-login-brand w-full flex items-center justify-center gap-2.5 py-3.5 px-4 text-white text-sm font-bold rounded-xl cursor-pointer">
-                    <span>Sign In to Terminal</span>
+                    <span><?= e(__('auth.login_btn')) ?></span>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                         <polyline points="12 5 19 12 12 19"></polyline>
@@ -244,7 +254,7 @@ require __DIR__ . '/../core/header.php';
                     <div class="w-full border-t border-slate-200"></div>
                 </div>
                 <div class="relative flex justify-center text-xs">
-                    <span class="bg-white px-3 text-slate-400 font-medium uppercase tracking-wider">New to SAHAN ICT?</span>
+                    <span class="bg-white px-3 text-slate-400 font-medium uppercase tracking-wider"><?= e(__('auth.new_to', '', ['company' => $companyName])) ?></span>
                 </div>
             </div>
 
@@ -257,10 +267,10 @@ require __DIR__ . '/../core/header.php';
                     </div>
                     <div>
                         <div class="text-xs font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
-                            Register your restaurant
+                            <?= e(__('auth.register_link')) ?>
                         </div>
                         <div class="text-[11px] text-slate-500">
-                            Start <?= TRIAL_DAYS ?>-day free trial · No card needed
+                            <?= e(__('auth.trial_line', '', ['days' => TRIAL_DAYS])) ?>
                         </div>
                     </div>
                 </div>
@@ -280,7 +290,7 @@ require __DIR__ . '/../core/header.php';
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
-            <span>Encrypted 256-bit Secure Session</span>
+            <span><?= e(__('auth.secure')) ?></span>
         </div>
 
     </div>
@@ -288,11 +298,13 @@ require __DIR__ . '/../core/header.php';
     <!-- Footer -->
     <footer class="text-center text-xs text-slate-500 pt-6 space-y-1.5">
         <div>
-            Made By <a href="https://sahanict.org" target="_blank" rel="noopener noreferrer" class="font-bold text-slate-800 hover:text-blue-600 transition-colors">SAHAN ICT</a> ·
-            <a href="https://sahanict.org" target="_blank" rel="noopener noreferrer" class="text-slate-500 hover:text-blue-600 transition-colors">sahanict.org</a>
+            <?= e(__('auth.made_by')) ?> <a href="<?= e($webUrl) ?>" target="_blank" rel="noopener noreferrer" class="font-bold text-slate-800 hover:text-blue-600 transition-colors"><?= e($companyName) ?></a>
+            <?php if ($webName !== ''): ?>
+                · <a href="<?= e($webUrl) ?>" target="_blank" rel="noopener noreferrer" class="text-slate-500 hover:text-blue-600 transition-colors"><?= e($webName) ?></a>
+            <?php endif; ?>
         </div>
         <div>
-            <a href="<?= url('platform/login.php') ?>" class="text-slate-400 hover:text-blue-700 transition font-medium">Platform Admin Portal</a>
+            <a href="<?= url('platform/login.php') ?>" class="text-slate-400 hover:text-blue-700 transition font-medium"><?= e(__('auth.platform_portal')) ?></a>
         </div>
     </footer>
 </div>

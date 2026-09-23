@@ -15,10 +15,10 @@ if (!defined('BASE_URL')) {
 }
 
 $tabs = [
-    'daily'     => ['Daily transactions', 'admin/report_daily.php',     ['admin', 'cashier']],
-    'unpaid'    => ['Unpaid bills',       'admin/report_unpaid.php',    ['admin', 'cashier']],
-    'financial' => ['Financial (P&L)',    'admin/report_financial.php', ['admin']],
-    'overview'  => ['Sales overview',     'admin/reports.php',          ['admin']],
+    'daily'     => [__('rt.daily'),     'admin/report_daily.php',     ['admin', 'cashier']],
+    'unpaid'    => [__('rt.unpaid'),    'admin/report_unpaid.php',    ['admin', 'cashier']],
+    'financial' => [__('rt.financial'), 'admin/report_financial.php', ['admin']],
+    'overview'  => [__('rt.overview'),  'admin/reports.php',          ['admin']],
 ];
 
 // CSV link keeps whatever filter is on screen.
@@ -43,27 +43,27 @@ $csvHref  = '?' . http_build_query($csvQuery);
 <form class="flex flex-wrap gap-2 mb-4 items-center no-print" method="get">
     <?php if ($filterMode === 'range'): ?>
         <input type="date" name="from" class="input" value="<?= e($from) ?>">
-        <span class="text-muted self-center">to</span>
+        <span class="text-muted self-center"><?= e(__('lbl.to')) ?></span>
         <input type="date" name="to" class="input" value="<?= e($to) ?>">
-        <button class="btn btn-outline">Apply</button>
+        <button class="btn btn-outline"><?= e(__('btn.apply')) ?></button>
         <div class="flex gap-1">
-            <a class="btn btn-outline btn-sm" href="?range=today">Today</a>
-            <a class="btn btn-outline btn-sm" href="?range=yesterday">Yesterday</a>
-            <a class="btn btn-outline btn-sm" href="?range=week">Last 7 days</a>
-            <a class="btn btn-outline btn-sm" href="?range=month">This month</a>
-            <a class="btn btn-outline btn-sm" href="?range=lastmonth">Last month</a>
+            <a class="btn btn-outline btn-sm" href="?range=today"><?= e(__('lbl.today')) ?></a>
+            <a class="btn btn-outline btn-sm" href="?range=yesterday"><?= e(__('rt.yesterday')) ?></a>
+            <a class="btn btn-outline btn-sm" href="?range=week"><?= e(__('rt.last7')) ?></a>
+            <a class="btn btn-outline btn-sm" href="?range=month"><?= e(__('rt.this_month')) ?></a>
+            <a class="btn btn-outline btn-sm" href="?range=lastmonth"><?= e(__('rt.last_month')) ?></a>
         </div>
     <?php elseif ($filterMode === 'date'): ?>
         <a class="btn btn-outline" href="?date=<?= e(date('Y-m-d', strtotime($date . ' -1 day'))) ?>">&larr;</a>
         <input type="date" name="date" class="input" value="<?= e($date) ?>"
                onchange="this.form.submit()">
         <a class="btn btn-outline" href="?date=<?= e(date('Y-m-d', strtotime($date . ' +1 day'))) ?>">&rarr;</a>
-        <a class="btn btn-outline btn-sm" href="?date=<?= date('Y-m-d') ?>">Today</a>
+        <a class="btn btn-outline btn-sm" href="?date=<?= date('Y-m-d') ?>"><?= e(__('lbl.today')) ?></a>
     <?php endif; ?>
 
     <div class="flex gap-2 ml-auto">
         <?= $reportExtra ?? '' ?>
-        <a class="btn btn-ok btn-sm" href="<?= e($csvHref) ?>">Download CSV</a>
-        <button type="button" class="btn btn-dark btn-sm" onclick="window.print()">Print</button>
+        <a class="btn btn-ok btn-sm" href="<?= e($csvHref) ?>"><?= e(__('rt.csv')) ?></a>
+        <button type="button" class="btn btn-dark btn-sm" onclick="window.print()"><?= e(__('btn.print')) ?></button>
     </div>
 </form>

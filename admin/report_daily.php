@@ -40,13 +40,17 @@ foreach ($orders as $o) {
 
     if ($o['status'] === 'paid' && $inDay($o['paid_at'])) {
         $kind = 'Sale';      $at = $o['paid_at'];   $amount = (float)$o['total'];
+        $label = __('rd.k_sale');
     } elseif ($o['status'] === 'void' && $inDay($o['voided_at'])) {
         $kind = 'Void';      $at = $o['voided_at']; $amount = 0.0;
+        $label = __('rd.k_void');
     } elseif ($o['status'] === 'open') {
         $kind = 'Unpaid';    $at = $o['created_at']; $amount = 0.0;
+        $label = __('rd.k_unpaid');
     } else {
         // Opened today but paid/voided on another day: shown for completeness.
         $kind = $o['status'] === 'paid' ? 'Sale (paid ' . dt($o['paid_at'], 'd M') . ')' : 'Void (later)';
+        $label = $o['status'] === 'paid' ? __('rd.k_sale_paid', '', ['date' => dt($o['paid_at'], 'd M')]) : __('rd.k_void_later');
         $at   = $o['created_at'];
         $amount = 0.0;
     }
@@ -54,14 +58,15 @@ foreach ($orders as $o) {
     $log[] = [
         'at'      => $at,
         'kind'    => $kind,
+        'label'   => $label,
         'ref'     => '#' . $o['order_no'],
         'id'      => (int)$o['id'],
-        'detail'  => ($o['order_type'] === 'takeaway' ? 'Takeaway' : 'Dine in')
+        'detail'  => ($o['order_type'] === 'takeaway' ? __('pos.takeaway') : __('pos.dine_in'))
                      . ($o['table_label'] ? ' · ' . $o['table_label'] : '')
-                     . ' · ' . (int)$o['item_count'] . ' item(s)',
+                     . ' · ' . __('rd.items', '', ['n' => (int)$o['item_count']]),
         'by'      => $o['taken_by'] . ($o['paid_by_name'] && $o['paid_by_name'] !== $o['taken_by']
                      ? ' → ' . $o['paid_by_name'] : ''),
-        'method'  => $o['payment_method'] ? ucfirst($o['payment_method']) : '—',
+        'method'  => $o['payment_method'] ? __('pay.' . $o['payment_method'], ucfirst($o['payment_method'])) : '—',
         'net'     => (float)$o['subtotal'] - (float)$o['discount'],
         'vat'     => (float)$o['tax'],
         'value'   => (float)$o['total'],
@@ -74,11 +79,12 @@ foreach ($expenses as $x) {
         'at'      => $x['created_at'] >= $t['start'] && $x['created_at'] < $t['end']
                      ? $x['created_at'] : $date . ' 23:59:59',
         'kind'    => 'Expense',
-        'ref'     => $x['category'],
+        'label'   => __('rd.k_expense'),
+        'ref'     => __('expcat.' . $x['category'], $x['category']),
         'id'      => null,
         'detail'  => $x['description'],
         'by'      => $x['full_name'],
-        'method'  => $x['paid_from'] === 'drawer' ? 'Drawer' : 'Other',
+        'method'  => $x['paid_from'] === 'drawer' ? __('ex.drawer') : __('ex.other'),
         'net'     => null,
         'vat'     => null,
         'value'   => (float)$x['amount'],
@@ -111,11 +117,11 @@ if (get('export') === 'csv') {
         $rows);
 }
 
-$pageTitle   = 'Reports · Daily transactions';
+$pageTitle   = __('rd.title');
 $reportTab   = 'daily';
 $filterMode  = 'date';
 $reportExtra = '<a class="btn btn-outline btn-sm" target="_blank" href="'
-             . e(url('admin/report_daily_slip.php?date=' . $date . '&print=1')) . '">Thermal slip</a>';
+             . e(url('admin/report_daily_slip.php?date=' . $date . '&print=1')) . '">' . e(__('rd.slip')) . '</a>';
 require __DIR__ . '/../core/header.php';
 require __DIR__ . '/_report_tabs.php';
 
@@ -132,54 +138,53 @@ $kindBadge = static fn(string $k): string => match (true) {
 
 <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
     <div class="stat-card accent">
-        <div class="label">Sales before VAT</div><div class="value"><?= money($t['net']) ?></div>
-        <small class="text-muted text-xs"><?= $t['orders'] ?> order(s) · discounts <?= money($t['discount']) ?></small>
+        <div class="label"><?= e(__('sa.before_vat')) ?></div><div class="value"><?= money($t['net']) ?></div>
+        <small class="text-muted text-xs"><?= e(__('rd.orders_disc', '', ['n' => $t['orders'], 'amount' => money($t['discount'])])) ?></small>
     </div>
     <div class="stat-card">
-        <div class="label">VAT collected</div><div class="value"><?= money($t['tax']) ?></div>
-        <small class="text-muted text-xs">owed to the government</small>
+        <div class="label"><?= e(__('sa.vat_collected')) ?></div><div class="value"><?= money($t['tax']) ?></div>
+        <small class="text-muted text-xs"><?= e(__('rd.owed_gov')) ?></small>
     </div>
     <div class="stat-card">
-        <div class="label">Total collected</div><div class="value"><?= money($t['sales']) ?></div>
+        <div class="label"><?= e(__('sa.total_collected')) ?></div><div class="value"><?= money($t['sales']) ?></div>
         <div class="text-xs mt-1">
-            Cash <strong class="float-right"><?= money($t['cash']) ?></strong><br>
-            Mobile money <strong class="float-right"><?= money($t['mobile']) ?></strong><br>
-            Card <strong class="float-right"><?= money($t['card']) ?></strong>
+            <?= e(__('pay.cash')) ?> <strong class="float-right"><?= money($t['cash']) ?></strong><br>
+            <?= e(__('pay.mobile')) ?> <strong class="float-right"><?= money($t['mobile']) ?></strong><br>
+            <?= e(__('pay.card')) ?> <strong class="float-right"><?= money($t['card']) ?></strong>
         </div>
     </div>
     <div class="stat-card bad">
-        <div class="label">Expenses</div><div class="value"><?= money($t['expenses']) ?></div>
-        <small class="text-muted text-xs"><?= money($t['exp_drawer']) ?> from the drawer</small>
+        <div class="label"><?= e(__('nav.expenses')) ?></div><div class="value"><?= money($t['expenses']) ?></div>
+        <small class="text-muted text-xs"><?= e(__('rd.from_drawer', '', ['amount' => money($t['exp_drawer'])])) ?></small>
     </div>
     <div class="stat-card <?= $t['unpaid_n'] ? 'bad' : 'good' ?>">
-        <div class="label">Still unpaid</div><div class="value"><?= money($t['unpaid']) ?></div>
-        <small class="text-muted text-xs"><?= $t['unpaid_n'] ?> bill(s) opened this day
-            <?php if ($t['unpaid_n']): ?>· <a href="<?= url('admin/report_unpaid.php') ?>">see all</a><?php endif; ?>
+        <div class="label"><?= e(__('rd.still_unpaid')) ?></div><div class="value"><?= money($t['unpaid']) ?></div>
+        <small class="text-muted text-xs"><?= e(__('rd.bills_opened', '', ['n' => $t['unpaid_n']])) ?>
+            <?php if ($t['unpaid_n']): ?>· <a href="<?= url('admin/report_unpaid.php') ?>"><?= e(__('rd.see_all')) ?></a><?php endif; ?>
         </small>
     </div>
 </div>
 
 <p class="text-muted text-xs mb-3">
-    Net cash for the drawer: cash sales <?= money($t['cash']) ?> − drawer expenses <?= money($t['exp_drawer']) ?>
-    = <strong><?= money($t['net_cash']) ?></strong>.
+    <?= strtr(e(__('rd.net_cash')), ['{cash}' => money($t['cash']), '{exp}' => money($t['exp_drawer']), '{net}' => '<strong>' . money($t['net_cash']) . '</strong>']) ?>
     <?php if ($t['void_n']): ?>
-        <?= $t['void_n'] ?> order(s) worth <?= money($t['void_total']) ?> voided (not counted).
+        <?= e(__('rd.voided', '', ['n' => $t['void_n'], 'amount' => money($t['void_total'])])) ?>
     <?php endif; ?>
 </p>
 
 <div class="card mb-4 overflow-x-auto">
-    <div class="card-header">Transactions in time order · <?= count($log) ?></div>
+    <div class="card-header"><?= e(__('rd.in_order', '', ['n' => count($log)])) ?></div>
     <table class="tbl">
         <thead>
-            <tr><th>Time</th><th>Type</th><th>Reference</th><th>Detail</th><th>Staff</th>
-                <th>Method</th><th class="text-right">Before VAT</th><th class="text-right">VAT</th>
-                <th class="text-right">Total</th><th class="text-right">Cash movement</th></tr>
+            <tr><th><?= e(__('lbl.time')) ?></th><th><?= e(__('sa.type')) ?></th><th><?= e(__('pc.reference')) ?></th><th><?= e(__('rd.detail')) ?></th><th><?= e(__('rd.staff')) ?></th>
+                <th><?= e(__('pc.method')) ?></th><th class="text-right"><?= e(__('lbl.before_vat')) ?></th><th class="text-right"><?= e(__('lbl.vat')) ?></th>
+                <th class="text-right"><?= e(__('lbl.total')) ?></th><th class="text-right"><?= e(__('rd.cash_movement')) ?></th></tr>
         </thead>
         <tbody>
         <?php foreach ($log as $r): ?>
             <tr class="<?= $r['status'] === 'void' ? 'opacity-50' : '' ?>">
                 <td class="text-nowrap"><?= dt($r['at'], 'g:i A') ?></td>
-                <td><span class="badge <?= $kindBadge($r['kind']) ?>"><?= e($r['kind']) ?></span></td>
+                <td><span class="badge <?= $kindBadge($r['kind']) ?>"><?= e($r['label']) ?></span></td>
                 <td class="text-nowrap">
                     <?php if ($r['id']): ?>
                         <a href="<?= url('public/receipt.php?id=' . $r['id']) ?>" target="_blank"><?= e($r['ref']) ?></a>
@@ -197,19 +202,19 @@ $kindBadge = static fn(string $k): string => match (true) {
             </tr>
         <?php endforeach; ?>
         <?php if (!$log): ?>
-            <tr><td colspan="10" class="text-center text-muted py-8">Nothing happened on this day.</td></tr>
+            <tr><td colspan="10" class="text-center text-muted py-8"><?= e(__('rd.nothing')) ?></td></tr>
         <?php endif; ?>
         </tbody>
         <tfoot>
             <tr>
-                <th colspan="6" class="text-right">Paid sales</th>
+                <th colspan="6" class="text-right"><?= e(__('rd.paid_sales')) ?></th>
                 <th class="text-right"><?= money($t['net']) ?></th>
                 <th class="text-right"><?= money($t['tax']) ?></th>
                 <th class="text-right"><?= money($t['sales']) ?></th>
                 <th></th>
             </tr>
             <tr>
-                <th colspan="9" class="text-right">Sales before VAT − expenses</th>
+                <th colspan="9" class="text-right"><?= e(__('rd.net_minus_exp')) ?></th>
                 <th class="text-right"><?= money($t['net'] - $t['expenses']) ?></th>
             </tr>
         </tfoot>
@@ -217,16 +222,16 @@ $kindBadge = static fn(string $k): string => match (true) {
 </div>
 
 <div class="card">
-    <div class="card-header">Cash drawer shifts</div>
+    <div class="card-header"><?= e(__('rd.shifts')) ?></div>
     <table class="tbl">
-        <thead><tr><th>Cashier</th><th>Opened</th><th>Closed</th><th class="text-right">Float</th>
-            <th class="text-right">Expected</th><th class="text-right">Counted</th><th class="text-right">Variance</th></tr></thead>
+        <thead><tr><th><?= e(__('sh.cashier')) ?></th><th><?= e(__('sh.opened')) ?></th><th><?= e(__('sh.closed')) ?></th><th class="text-right"><?= e(__('sh.float_col')) ?></th>
+            <th class="text-right"><?= e(__('sh.expected')) ?></th><th class="text-right"><?= e(__('sh.counted')) ?></th><th class="text-right"><?= e(__('sh.variance')) ?></th></tr></thead>
         <tbody>
         <?php foreach ($t['shifts'] as $s): $v = $s['variance'] === null ? null : (float)$s['variance']; ?>
             <tr>
                 <td><?= e($s['full_name']) ?></td>
                 <td><?= dt($s['opened_at'], 'd M, g:i A') ?></td>
-                <td><?= $s['status'] === 'open' ? '<span class="badge badge-warning">still open</span>' : dt($s['closed_at'], 'd M, g:i A') ?></td>
+                <td><?= $s['status'] === 'open' ? '<span class="badge badge-warning">' . e(__('rd.still_open')) . '</span>' : dt($s['closed_at'], 'd M, g:i A') ?></td>
                 <td class="text-right"><?= money($s['opening_float']) ?></td>
                 <td class="text-right"><?= money($s['expected_cash']) ?></td>
                 <td class="text-right"><?= $s['counted_cash'] === null ? '—' : money($s['counted_cash']) ?></td>
@@ -236,7 +241,7 @@ $kindBadge = static fn(string $k): string => match (true) {
             </tr>
         <?php endforeach; ?>
         <?php if (!$t['shifts']): ?>
-            <tr><td colspan="7" class="text-center text-muted py-4">No drawer shift on this day.</td></tr>
+            <tr><td colspan="7" class="text-center text-muted py-4"><?= e(__('rd.no_shift')) ?></td></tr>
         <?php endif; ?>
         </tbody>
     </table>

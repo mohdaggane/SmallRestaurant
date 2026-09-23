@@ -18,7 +18,7 @@ if (is_post()) {
     // Same throttle as the restaurant login: 5 failures locks the form for 60 seconds.
     $lockedUntil = (int)($_SESSION['platform_locked_until'] ?? 0);
     if ($lockedUntil > time()) {
-        $error = 'Too many failed attempts. Try again in ' . ($lockedUntil - time()) . ' seconds.';
+        $error = __('auth.err_locked', '', ['s' => $lockedUntil - time()]);
     } else {
         $admin = db_one('SELECT * FROM platform_admins WHERE username = ? AND is_active = 1 LIMIT 1', [$username]);
         if ($admin && password_verify($password, $admin['password_hash'])) {
@@ -32,14 +32,18 @@ if (is_post()) {
             $_SESSION['platform_locked_until'] = time() + 60;
             $_SESSION['platform_fails'] = 0;
         }
-        $error = 'Wrong username or password.';
+        $error = __('auth.err_wrong');
     }
 }
 
-$pageTitle = 'Platform sign in';
+$pageTitle = __('plogin.page_title');
 $layout    = 'blank';
 $platform  = true;
 require __DIR__ . '/../core/header.php';
+
+$companyName = platform_setting('company_name', 'SAHAN ICT');
+$webName     = platform_setting('web_name', 'sahanict.org');
+$webUrl      = platform_setting('web_url', 'https://sahanict.org');
 ?>
 <style>
     :root {
@@ -91,8 +95,8 @@ require __DIR__ . '/../core/header.php';
                     </svg>
                 </div>
                 <div>
-                    <div class="font-black text-[15px] tracking-tight" style="color:var(--sn);">SAHAN ICT</div>
-                    <div class="text-[10px] font-bold tracking-widest uppercase text-blue-600">Platform Admin</div>
+                    <div class="font-black text-[15px] tracking-tight" style="color:var(--sn);"><?= e($companyName) ?></div>
+                    <div class="text-[10px] font-bold tracking-widest uppercase text-blue-600"><?= e(__('nav.platform_admin')) ?></div>
                 </div>
             </a>
 
@@ -101,7 +105,7 @@ require __DIR__ . '/../core/header.php';
                     <line x1="19" y1="12" x2="5" y2="12"></line>
                     <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
-                <span>Back to Home</span>
+                <span><?= e(__('auth.back_home')) ?></span>
             </a>
         </div>
 
@@ -112,13 +116,13 @@ require __DIR__ . '/../core/header.php';
             <div class="mb-6">
                 <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-blue-700 bg-blue-50 border border-blue-100 mb-3">
                     <span>👑</span>
-                    <span>Platform Owner Portal</span>
+                    <span><?= e(__('plogin.badge')) ?></span>
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
-                    Platform Sign In
+                    <?= e(__('plogin.title')) ?>
                 </h1>
                 <p class="text-slate-500 text-sm leading-relaxed">
-                    Manage registered restaurants, subscription plans, and platform billing.
+                    <?= e(__('plogin.sub')) ?>
                 </p>
             </div>
 
@@ -139,7 +143,7 @@ require __DIR__ . '/../core/header.php';
                 <!-- Username Field -->
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2" for="platform_username">
-                        Admin Username
+                        <?= e(__('plogin.username')) ?>
                     </label>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
@@ -152,7 +156,7 @@ require __DIR__ . '/../core/header.php';
                                id="platform_username"
                                name="username"
                                class="input-field block w-full pl-10 pr-4 py-3 bg-slate-50 hover:bg-slate-100/60 focus:bg-white text-slate-900 text-sm font-medium rounded-xl border border-slate-200 outline-none transition"
-                               placeholder="Platform admin username"
+                               placeholder="<?= e(__('plogin.username_ph')) ?>"
                                value="<?= e($username) ?>"
                                autofocus
                                required>
@@ -163,9 +167,9 @@ require __DIR__ . '/../core/header.php';
                 <div>
                     <div class="flex items-center justify-between mb-2">
                         <label class="block text-xs font-bold uppercase tracking-wider text-slate-700" for="platform_password">
-                            Password
+                            <?= e(__('auth.password')) ?>
                         </label>
-                        <span class="text-xs text-slate-400">Owner Key</span>
+                        <span class="text-xs text-slate-400"><?= e(__('plogin.owner_key')) ?></span>
                     </div>
                     <div class="relative">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
@@ -183,7 +187,7 @@ require __DIR__ . '/../core/header.php';
                         <button type="button"
                                 id="togglePassword"
                                 class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 transition"
-                                aria-label="Toggle password visibility">
+                                aria-label="<?= e(__('auth.toggle_pw')) ?>">
                             <svg id="eyeOpen" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
@@ -199,7 +203,7 @@ require __DIR__ . '/../core/header.php';
                 <!-- Sign In Submit Button -->
                 <button type="submit"
                         class="btn-platform-brand w-full flex items-center justify-center gap-2.5 py-3.5 px-4 text-white text-sm font-bold rounded-xl cursor-pointer">
-                    <span>Sign In to Platform Admin</span>
+                    <span><?= e(__('plogin.btn')) ?></span>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                         <polyline points="12 5 19 12 12 19"></polyline>
@@ -213,7 +217,7 @@ require __DIR__ . '/../core/header.php';
                     <div class="w-full border-t border-slate-200"></div>
                 </div>
                 <div class="relative flex justify-center text-xs">
-                    <span class="bg-white px-3 text-slate-400 font-medium uppercase tracking-wider">Restaurant Staff?</span>
+                    <span class="bg-white px-3 text-slate-400 font-medium uppercase tracking-wider"><?= e(__('plogin.staff_q')) ?></span>
                 </div>
             </div>
 
@@ -226,10 +230,10 @@ require __DIR__ . '/../core/header.php';
                     </div>
                     <div>
                         <div class="text-xs font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
-                            Restaurant Staff Sign In
+                            <?= e(__('plogin.staff_link')) ?>
                         </div>
                         <div class="text-[11px] text-slate-500">
-                            Cashiers, Waiters, Kitchen &amp; Restaurant Admins
+                            <?= e(__('plogin.staff_roles')) ?>
                         </div>
                     </div>
                 </div>
@@ -249,15 +253,15 @@ require __DIR__ . '/../core/header.php';
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
-            <span>Encrypted 256-bit Secure Platform Access</span>
+            <span><?= e(__('plogin.secure')) ?></span>
         </div>
 
     </div>
 
     <!-- Footer -->
     <footer class="text-center text-xs text-slate-500 pt-6">
-        Made By <a href="https://sahanict.org" target="_blank" rel="noopener noreferrer" class="font-bold text-slate-800 hover:text-blue-600 transition-colors">SAHAN ICT</a> ·
-        <a href="https://sahanict.org" target="_blank" rel="noopener noreferrer" class="text-slate-500 hover:text-blue-600 transition-colors">sahanict.org</a>
+        <?= e(__('auth.made_by')) ?> <a href="<?= e($webUrl) ?>" target="_blank" rel="noopener noreferrer" class="font-bold text-slate-800 hover:text-blue-600 transition-colors"><?= e($companyName) ?></a> ·
+        <a href="<?= e($webUrl) ?>" target="_blank" rel="noopener noreferrer" class="text-slate-500 hover:text-blue-600 transition-colors"><?= e($webName) ?></a>
     </footer>
 </div>
 

@@ -34,24 +34,24 @@ if ($orders) {
     }
 }
 
-$pageTitle = 'Kitchen';
+$pageTitle = __('kitchen.title', 'Kitchen');
 $layout    = 'wide';
 require __DIR__ . '/../core/header.php';
 ?>
 
 <div class="flex justify-between items-center mb-4 px-1">
     <h1 class="text-lg font-semibold m-0">
-        Kitchen queue · <?= count($orders) ?> order<?= count($orders) === 1 ? '' : 's' ?>
+        <?= e(__('kitchen.queue', 'Kitchen queue')) ?> · <?= count($orders) ?> <?= count($orders) === 1 ? e(__('kitchen.order', 'order')) : e(__('kitchen.orders', 'orders')) ?>
     </h1>
     <div class="flex items-center gap-3">
-        <small class="text-muted">Refreshes in <span id="tick">15</span>s</small>
-        <button class="btn btn-outline btn-sm" onclick="location.reload()">Refresh now</button>
+        <small class="text-muted"><?= e(__('kitchen.refreshes_in', 'Refreshes in')) ?> <span id="tick">15</span>s</small>
+        <button class="btn btn-outline btn-sm" onclick="location.reload()"><?= e(__('kitchen.refresh_now', 'Refresh now')) ?></button>
     </div>
 </div>
 
 <?php if (!$orders): ?>
     <div class="card"><div class="card-body text-center text-muted py-12">
-        Nothing waiting. All orders are served. 🎉
+        <?= e(__('kitchen.all_served', 'Nothing waiting. All orders are served. 🎉')) ?>
     </div></div>
 <?php endif; ?>
 
@@ -63,12 +63,12 @@ require __DIR__ . '/../core/header.php';
             <div>
                 <strong>#<?= e($o['order_no']) ?></strong><br>
                 <small class="text-muted text-xs">
-                    <?= $o['order_type'] === 'takeaway' ? 'Takeaway' : 'Dine in' ?><?= $o['table_label'] ? ' · ' . e($o['table_label']) : '' ?>
+                    <?= $o['order_type'] === 'takeaway' ? e(__('kitchen.takeaway', 'Takeaway')) : e(__('kitchen.dine_in', 'Dine in')) ?><?= $o['table_label'] ? ' · ' . e($o['table_label']) : '' ?>
                 </small>
             </div>
             <div class="text-right">
                 <span class="badge <?= $stale ? 'badge-danger' : 'badge-secondary' ?>">
-                    <?= (int)$o['age_min'] ?> min
+                    <?= e(__('dur.min', '{n} min', ['n' => (int)$o['age_min']])) ?>
                 </span><br>
                 <small class="text-muted text-xs"><?= e($o['taken_by']) ?></small>
             </div>
@@ -79,7 +79,7 @@ require __DIR__ . '/../core/header.php';
             <?php foreach ($linesByOrder[(int)$o['id']] ?? [] as $li): ?>
                 <?php if ((int)$li['round'] > 1 && (int)$li['round'] !== $shownRound): $shownRound = (int)$li['round']; ?>
                     <li class="py-2 border-t border-dashed border-line mt-1">
-                        <span class="badge badge-accent">Round <?= $shownRound ?> · added <?= dt($li['created_at'], 'g:i A') ?></span>
+                        <span class="badge badge-accent"><?= e(__('kitchen.round', 'Round')) ?> <?= $shownRound ?> · <?= e(__('kitchen.added', 'added')) ?> <?= dt($li['created_at'], 'g:i A') ?></span>
                     </li>
                 <?php endif; ?>
                 <li class="flex justify-between items-center gap-2 py-1.5 <?= $li['kitchen_status'] === 'served' ? 'opacity-40 line-through' : '' ?>">
@@ -92,9 +92,9 @@ require __DIR__ . '/../core/header.php';
                             <?= csrf_field() ?>
                             <input type="hidden" name="item_id" value="<?= (int)$li['id'] ?>">
                             <?php if ($li['kitchen_status'] === 'pending'): ?>
-                                <button name="to" value="preparing" class="btn btn-outline-warning btn-sm">Start</button>
+                                <button name="to" value="preparing" class="btn btn-outline-warning btn-sm"><?= e(__('kitchen.start', 'Start')) ?></button>
                             <?php endif; ?>
-                            <button name="to" value="served" class="btn btn-ok btn-sm">Done</button>
+                            <button name="to" value="served" class="btn btn-ok btn-sm"><?= e(__('kitchen.done', 'Done')) ?></button>
                         </form>
                     <?php endif; ?>
                 </li>
@@ -105,7 +105,7 @@ require __DIR__ . '/../core/header.php';
             <form method="post" action="<?= url('public/kitchen_update.php') ?>">
                 <?= csrf_field() ?>
                 <input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>">
-                <button name="to" value="served" class="btn btn-outline btn-sm">Mark whole order served</button>
+                <button name="to" value="served" class="btn btn-outline btn-sm"><?= e(__('kitchen.mark_served', 'Mark whole order served')) ?></button>
             </form>
         </div>
     </div>

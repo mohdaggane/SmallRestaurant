@@ -6,27 +6,22 @@ require_role('admin');
 
 // key => [label, input type, help text]
 $SHOP_FIELDS = [
-    'shop_name'      => ['Shop name', 'text', ''],
-    'shop_tagline'   => ['Tagline', 'text', ''],
-    'shop_address'   => ['Address (printed on receipts)', 'text', ''],
-    'shop_phone'     => ['Phone number', 'text', ''],
-    'currency'       => ['Currency symbol', 'text', ''],
-    'receipt_footer' => ['Receipt footer message', 'text', ''],
+    'shop_name'      => [__('set.f_shop_name'), 'text', ''],
+    'shop_tagline'   => [__('set.f_tagline'), 'text', ''],
+    'shop_address'   => [__('set.f_address'), 'text', ''],
+    'shop_phone'     => [__('set.f_phone'), 'text', ''],
+    'currency'       => [__('set.f_currency'), 'text', ''],
+    'receipt_footer' => [__('set.f_footer'), 'text', ''],
 ];
 
 $MERCHANT_FIELDS = [
-    'merchant_name'  => ['Merchant account name', 'text',
-                         'Shown above the dial code so the customer knows who they are paying.'],
-    'merchant_id'    => ['Merchant number', 'text',
-                         'Leave blank to keep the dial code off every printout.'],
-    'ussd_prefix'    => ['USSD prefix', 'text',
-                         'EVC Plus uses *789*. Change it only if your provider differs.'],
+    'merchant_name'  => [__('set.f_merchant_name'), 'text', __('set.h_merchant_name')],
+    'merchant_id'    => [__('set.f_merchant_id'), 'text', __('set.h_merchant_id')],
+    'ussd_prefix'    => [__('set.f_ussd'), 'text', __('set.h_ussd')],
 ];
 
 $CHECKBOXES = [
-    'merchant_on_receipt' => ['Also print the dial code on paid receipts',
-                              'Unpaid bills always show it. Turn this off if printing it on a
-                               cash-paid receipt confuses customers.'],
+    'merchant_on_receipt' => [__('set.cb_receipt'), __('set.cb_receipt_help')],
 ];
 
 if (is_post()) {
@@ -82,29 +77,30 @@ if (is_post()) {
         );
 
         $conn->commit();
-        flash('Settings saved.');
+        flash(__('set.saved'));
 
         if (abs($newRate - $oldRate) > 0.0001) {
-            flash('VAT is now ' . vat_label($newRate) . ' (was ' . vat_label($oldRate) . ').'
-                . ($repriced ? " $repriced unpaid bill(s) re-priced at the new rate; paid orders are unchanged." : ''),
+            flash(__('set.vat_changed', '', ['new' => vat_label($newRate), 'old' => vat_label($oldRate)])
+                . ($repriced ? __('set.vat_repriced', '', ['n' => $repriced]) : ''),
                 'info');
         }
         if ($newRate > 0 && $newRate < 1) {
             $meant = $newRate * 100;
-            flash('VAT is set to ' . vat_label($newRate) . ', which is less than one percent. '
-                . 'If you meant ' . vat_label($meant) . ', type '
-                . rtrim(rtrim(number_format($meant, 2, '.', ''), '0'), '.') . ' in the VAT box.', 'warning');
+            flash(__('set.vat_tiny', '', [
+                'rate'  => vat_label($newRate),
+                'meant' => vat_label($meant),
+                'typed' => rtrim(rtrim(number_format($meant, 2, '.', ''), '0'), '.'),
+            ]), 'warning');
         }
     } catch (Throwable $err) {
         $conn->rollback();
-        flash('Nothing was saved — the database rejected one of those values: '
-            . $err->getMessage(), 'danger');
+        flash(__('set.err_db', '', ['error' => $err->getMessage()]), 'danger');
     }
 
     redirect('admin/settings.php');
 }
 
-$pageTitle = 'Settings';
+$pageTitle = __('nav.settings');
 require __DIR__ . '/../core/header.php';
 ?>
 
@@ -113,7 +109,7 @@ require __DIR__ . '/../core/header.php';
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
     <div class="space-y-4">
         <div class="card">
-            <div class="card-header">Shop details</div>
+            <div class="card-header"><?= e(__('set.shop_details')) ?></div>
             <div class="card-body space-y-3">
                 <?php foreach ($SHOP_FIELDS as $key => [$label, $type, $help]): ?>
                     <div>
@@ -127,32 +123,30 @@ require __DIR__ . '/../core/header.php';
         </div>
 
         <div class="card">
-            <div class="card-header">VAT</div>
+            <div class="card-header"><?= e(__('lbl.vat')) ?></div>
             <div class="card-body space-y-3">
                 <div>
-                    <label class="label" for="set_vat">VAT rate</label>
+                    <label class="label" for="set_vat"><?= e(__('set.vat_rate')) ?></label>
                     <div class="flex max-w-[200px]">
                         <input type="number" name="tax_percent" id="set_vat" class="input rounded-r-none text-right"
                                step="0.01" min="0" max="100"
                                value="<?= e(rtrim(rtrim(number_format(vat_rate(), 2, '.', ''), '0'), '.')) ?>">
                         <span class="px-3 flex items-center bg-brand-light border border-l-0 border-line rounded-r-lg text-muted text-sm">%</span>
                     </div>
-                    <p class="form-text">Enter the percentage: <strong>5</strong> for 5%. Enter <strong>0</strong> for no VAT.</p>
+                    <p class="form-text"><?= strtr(e(__('set.vat_help')), ['{five}' => '<strong>5</strong>', '{zero}' => '<strong>0</strong>']) ?></p>
                 </div>
                 <div class="bg-brand-light/50 rounded-lg px-4 py-3 text-sm" id="vatPreview">
                     <?php $ex = vat_amount(2.00, vat_rate()); ?>
-                    <?= e(money(2)) ?> of food + VAT <?= e(money($ex)) ?>
-                    = customer pays <strong><?= e(money(2 + $ex)) ?></strong>
+                    <?= strtr(e(__('set.vat_preview')), ['{food}' => e(money(2)), '{vat}' => e(money($ex)), '{total}' => '<strong>' . e(money(2 + $ex)) . '</strong>']) ?>
                 </div>
             </div>
         </div>
 
         <div class="card">
-            <div class="card-header">Mobile money merchant account</div>
+            <div class="card-header"><?= e(__('set.merchant_card')) ?></div>
             <div class="card-body space-y-3">
                 <p class="text-muted text-sm">
-                    Every bill and receipt prints a dial code the customer can enter on their
-                    phone to pay you directly:
+                    <?= e(__('set.merchant_intro')) ?>
                     <code class="bg-brand-light px-1 rounded">*789*&lt;merchant number&gt;*&lt;amount&gt;#</code>
                 </p>
 
@@ -180,9 +174,9 @@ require __DIR__ . '/../core/header.php';
                 <?php endforeach; ?>
 
                 <div class="bg-brand-light/50 rounded-lg px-4 py-3">
-                    <div class="text-xs text-muted mb-1">Printed on a <?= e(money(6)) ?> order:</div>
+                    <div class="text-xs text-muted mb-1"><?= e(__('set.printed_on', '', ['amount' => money(6)])) ?></div>
                     <div id="ussdPreview" class="font-mono text-lg font-bold">
-                        <?= e(merchant_ussd(6.00) ?? 'No merchant number set — nothing will print.') ?>
+                        <?= e(merchant_ussd(6.00) ?? __('set.no_merchant')) ?>
                     </div>
                 </div>
             </div>
@@ -191,22 +185,21 @@ require __DIR__ . '/../core/header.php';
 
     <div class="space-y-4">
         <div class="card">
-            <div class="card-header">About this install</div>
+            <div class="card-header"><?= e(__('set.about')) ?></div>
             <div class="card-body text-sm space-y-2">
-                <p class="text-muted">VAT is added on top of every order at the rate set here. Changing the
-                   rate re-prices <strong>unpaid</strong> bills; paid receipts keep the rate they were sold at.</p>
+                <p class="text-muted"><?= strtr(e(__('set.about_text')), ['{unpaid}' => '<strong>' . e(__('set.unpaid')) . '</strong>']) ?></p>
                 <table class="tbl">
                     <tr><td>PHP</td><td class="text-right"><?= e(PHP_VERSION) ?></td></tr>
-                    <tr><td>Database</td><td class="text-right"><?= e($conn->server_info) ?></td></tr>
-                    <tr><td>Menu items</td><td class="text-right"><?= (int)db_value('SELECT COUNT(*) FROM menu_items WHERE company_id = ?', [company_id()]) ?></td></tr>
-                    <tr><td>Orders recorded</td><td class="text-right"><?= (int)db_value('SELECT COUNT(*) FROM orders WHERE company_id = ?', [company_id()]) ?></td></tr>
-                    <tr><td>Staff accounts</td><td class="text-right"><?= (int)db_value('SELECT COUNT(*) FROM users WHERE company_id = ?', [company_id()]) ?></td></tr>
+                    <tr><td><?= e(__('set.database')) ?></td><td class="text-right"><?= e($conn->server_info) ?></td></tr>
+                    <tr><td><?= e(__('nav.menu_items')) ?></td><td class="text-right"><?= (int)db_value('SELECT COUNT(*) FROM menu_items WHERE company_id = ?', [company_id()]) ?></td></tr>
+                    <tr><td><?= e(__('set.orders_recorded')) ?></td><td class="text-right"><?= (int)db_value('SELECT COUNT(*) FROM orders WHERE company_id = ?', [company_id()]) ?></td></tr>
+                    <tr><td><?= e(__('set.staff_accounts')) ?></td><td class="text-right"><?= (int)db_value('SELECT COUNT(*) FROM users WHERE company_id = ?', [company_id()]) ?></td></tr>
                 </table>
             </div>
         </div>
 
         <div class="card">
-            <div class="card-header">How the dial code prints</div>
+            <div class="card-header"><?= e(__('set.how_prints')) ?></div>
             <div class="card-body">
                 <div class="receipt" style="width:auto;margin:0;">
                     <div class="rule"></div>
@@ -224,7 +217,7 @@ require __DIR__ . '/../core/header.php';
 </div>
 
 <div class="mt-4 mb-6">
-    <button class="btn btn-brand btn-lg">Save settings</button>
+    <button class="btn btn-brand btn-lg"><?= e(__('set.save')) ?></button>
 </div>
 </form>
 
@@ -244,7 +237,7 @@ $pageScripts = '
             prefix = prefix.slice(0, -1);
         }
         out.textContent = id === ""
-            ? "No merchant number set — nothing will print."
+            ? ' . json_encode(__('set.no_merchant')) . '
             : prefix + "*" + id + "*6.00#";
     }
     idBox.addEventListener("input", redraw);
@@ -260,8 +253,9 @@ $pageScripts = '
     box.addEventListener("input", function () {
         var rate = Math.max(0, Number(box.value) || 0);
         var vat  = Math.round(200 * rate / 100) / 100;
-        var note = rate > 0 && rate < 1 ? "  (less than 1% — for five percent type 5)" : "";
-        out.textContent = m(2) + " of food + VAT " + m(vat) + " = customer pays " + m(2 + vat) + note;
+        var note = rate > 0 && rate < 1 ? ' . json_encode(__('set.vat_small_note')) . ' : "";
+        var tpl  = ' . json_encode(__('set.vat_preview')) . ';
+        out.textContent = tpl.replace("{food}", m(2)).replace("{vat}", m(vat)).replace("{total}", m(2 + vat)) + note;
     });
 }());
 </script>';

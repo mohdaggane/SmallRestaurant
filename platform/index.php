@@ -58,71 +58,71 @@ $revenueMonth = (float)db_value(
     [date('Y-m-01 00:00:00')]
 );
 
-$pageTitle = 'Restaurants';
+$pageTitle = __('pf.restaurants');
 $platform  = true;
 require __DIR__ . '/../core/header.php';
 ?>
 
 <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
     <a class="stat-card accent no-underline" href="?">
-        <div class="label">Restaurants</div>
+        <div class="label"><?= e(__('pf.restaurants')) ?></div>
         <div class="value"><?= (int)$stats['total'] ?></div>
-        <small class="text-muted text-xs"><?= (int)$stats['active'] ?> paying · <?= (int)$stats['trial'] ?> on trial</small>
+        <small class="text-muted text-xs"><?= e(__('pi.paying_trial', '', ['paying' => (int)$stats['active'], 'trial' => (int)$stats['trial']])) ?></small>
     </a>
     <a class="stat-card no-underline" href="?status=expiring">
-        <div class="label">Expiring in 7 days</div>
+        <div class="label"><?= e(__('pi.expiring_7')) ?></div>
         <div class="value"><?= (int)$stats['expiring'] ?></div>
-        <small class="text-muted text-xs">follow up for payment</small>
+        <small class="text-muted text-xs"><?= e(__('pi.follow_up')) ?></small>
     </a>
     <a class="stat-card bad no-underline" href="?status=expired">
-        <div class="label">Expired</div>
+        <div class="label"><?= e(__('st.expired')) ?></div>
         <div class="value"><?= (int)$stats['expired'] ?></div>
-        <small class="text-muted text-xs">staff are locked out</small>
+        <small class="text-muted text-xs"><?= e(__('pi.locked_out')) ?></small>
     </a>
     <a class="stat-card no-underline" href="?status=suspended">
-        <div class="label">Suspended</div>
+        <div class="label"><?= e(__('st.suspended')) ?></div>
         <div class="value"><?= (int)$stats['suspended'] ?></div>
-        <small class="text-muted text-xs">blocked by you</small>
+        <small class="text-muted text-xs"><?= e(__('pi.blocked_by_you')) ?></small>
     </a>
     <div class="stat-card good">
-        <div class="label">Received this month</div>
+        <div class="label"><?= e(__('pi.received_month')) ?></div>
         <div class="value"><?= e('$' . number_format($revenueMonth, 2)) ?></div>
-        <small class="text-muted text-xs">recorded payments</small>
+        <small class="text-muted text-xs"><?= e(__('pi.recorded_pay')) ?></small>
     </div>
 </div>
 
 <form class="flex flex-wrap gap-2 items-end mb-4" method="get">
     <div>
-        <label class="label" for="q">Search</label>
-        <input type="text" id="q" name="q" class="input" value="<?= e($q) ?>" placeholder="Name, short name or phone">
+        <label class="label" for="q"><?= e(__('btn.search')) ?></label>
+        <input type="text" id="q" name="q" class="input" value="<?= e($q) ?>" placeholder="<?= e(__('pi.search_ph')) ?>">
     </div>
     <div>
-        <label class="label" for="status">Show</label>
+        <label class="label" for="status"><?= e(__('lbl.show')) ?></label>
         <select id="status" name="status" class="input">
-            <?php foreach (['' => 'All', 'trial' => 'On trial', 'active' => 'Paying', 'expiring' => 'Expiring in 7 days',
-                            'expired' => 'Expired', 'suspended' => 'Suspended'] as $k => $label): ?>
+            <?php foreach (['' => __('lbl.all'), 'trial' => __('pi.on_trial'), 'active' => __('pi.paying'), 'expiring' => __('pi.expiring_7'),
+                            'expired' => __('st.expired'), 'suspended' => __('st.suspended')] as $k => $label): ?>
                 <option value="<?= e($k) ?>" <?= $filter === $k ? 'selected' : '' ?>><?= e($label) ?></option>
             <?php endforeach; ?>
         </select>
     </div>
-    <button class="btn btn-brand">Filter</button>
+    <button class="btn btn-brand"><?= e(__('btn.filter')) ?></button>
 </form>
 
 <div class="card">
     <table class="tbl">
         <thead><tr>
-            <th>Restaurant</th><th>Plan</th><th class="text-center">Status</th><th>Runs until</th>
-            <th class="text-right">Users</th><th class="text-right">Orders</th><th>Last order</th><th>Registered</th>
+            <th><?= e(__('pi.restaurant')) ?></th><th><?= e(__('pf.plan')) ?></th><th class="text-center"><?= e(__('lbl.status')) ?></th><th><?= e(__('pi.runs_until')) ?></th>
+            <th class="text-right"><?= e(__('nav.users')) ?></th><th class="text-right"><?= e(__('lbl.orders')) ?></th><th><?= e(__('pi.last_order')) ?></th><th><?= e(__('pi.registered')) ?></th>
         </tr></thead>
         <tbody>
         <?php foreach ($companies as $c): ?>
             <?php
             $access = company_access($c);
             [$label, $badge] = match (true) {
-                $access === 'suspended' => ['Suspended', 'badge-danger'],
-                $access !== 'ok'        => ['Expired', 'badge-danger'],
-                $c['status'] === 'trial' => ['Trial', 'badge-warning'],
-                default                  => ['Active', 'badge-success'],
+                $access === 'suspended' => [__('st.suspended'), 'badge-danger'],
+                $access !== 'ok'        => [__('st.expired'), 'badge-danger'],
+                $c['status'] === 'trial' => [__('st.trial'), 'badge-warning'],
+                default                  => [__('st.active'), 'badge-success'],
             };
             ?>
             <tr>
@@ -131,8 +131,8 @@ require __DIR__ . '/../core/header.php';
                     <div class="text-muted text-xs"><?= e($c['slug']) ?><?= $c['phone'] ? ' · ' . e($c['phone']) : '' ?></div>
                 </td>
                 <td><?= e($c['plan_name']) ?></td>
-                <td class="text-center"><span class="badge <?= $badge ?>"><?= $label ?></span></td>
-                <td class="text-nowrap"><?= $c['until_date'] ? dt($c['until_date'], 'd M Y') : '<span class="text-muted">no expiry</span>' ?></td>
+                <td class="text-center"><span class="badge <?= $badge ?>"><?= e($label) ?></span></td>
+                <td class="text-nowrap"><?= $c['until_date'] ? dt($c['until_date'], 'd M Y') : '<span class="text-muted">' . e(__('pi.no_expiry')) . '</span>' ?></td>
                 <td class="text-right"><?= (int)$c['user_count'] ?></td>
                 <td class="text-right"><?= (int)$c['order_count'] ?></td>
                 <td class="text-nowrap text-muted"><?= $c['last_order'] ? dt($c['last_order'], 'd M Y') : '—' ?></td>
@@ -140,7 +140,7 @@ require __DIR__ . '/../core/header.php';
             </tr>
         <?php endforeach; ?>
         <?php if (!$companies): ?>
-            <tr><td colspan="8" class="text-center text-muted py-8">No restaurants match.</td></tr>
+            <tr><td colspan="8" class="text-center text-muted py-8"><?= e(__('pi.no_match')) ?></td></tr>
         <?php endif; ?>
         </tbody>
     </table>

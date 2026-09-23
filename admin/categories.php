@@ -17,22 +17,22 @@ if (is_post()) {
         $active = isset($_POST['is_active']) ? 1 : 0;
 
         if ($name === '') {
-            flash('The category needs a name.', 'danger');
+            flash(__('cat.err_name'), 'danger');
         } else {
             $clash = db_one(
                 'SELECT id FROM categories WHERE company_id = ? AND name = ? AND id <> ?',
                 [company_id(), $name, $id]
             );
             if ($clash) {
-                flash('Another category is already called "' . $name . '".', 'danger');
+                flash(__('cat.err_clash', '', ['name' => $name]), 'danger');
             } elseif ($id > 0) {
                 db_exec('UPDATE categories SET name = ?, sort_order = ?, is_active = ? WHERE id = ? AND company_id = ?',
                     [$name, $sort, $active, $id, company_id()]);
-                flash('Category updated.');
+                flash(__('cat.updated'));
             } else {
                 db_exec('INSERT INTO categories (company_id, name, sort_order, is_active) VALUES (?,?,?,?)',
                     [company_id(), $name, $sort, $active]);
-                flash('Category added.');
+                flash(__('cat.added'));
             }
             redirect('admin/categories.php');
         }
@@ -42,10 +42,10 @@ if (is_post()) {
         $id    = (int)post('id');
         $count = (int)db_value('SELECT COUNT(*) FROM menu_items WHERE category_id = ? AND company_id = ?', [$id, company_id()]);
         if ($count > 0) {
-            flash("That category still holds $count menu item(s). Move or delete them first.", 'danger');
+            flash(__('cat.err_not_empty', '', ['n' => $count]), 'danger');
         } else {
             db_exec('DELETE FROM categories WHERE id = ? AND company_id = ?', [$id, company_id()]);
-            flash('Category deleted.');
+            flash(__('cat.deleted'));
         }
         redirect('admin/categories.php');
     }
@@ -61,13 +61,13 @@ $rows = db_all(
     [company_id()]
 );
 
-$pageTitle = 'Categories';
+$pageTitle = __('nav.categories');
 require __DIR__ . '/../core/header.php';
 ?>
 
 <div class="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-4">
     <div class="card">
-        <div class="card-header"><?= $editing ? 'Edit category' : 'New category' ?></div>
+        <div class="card-header"><?= e($editing ? __('cat.edit') : __('cat.new')) ?></div>
         <div class="card-body">
             <form method="post" class="space-y-3">
                 <?= csrf_field() ?>
@@ -75,26 +75,26 @@ require __DIR__ . '/../core/header.php';
                 <input type="hidden" name="id" value="<?= (int)($editing['id'] ?? 0) ?>">
 
                 <div>
-                    <label class="label">Name</label>
+                    <label class="label"><?= e(__('lbl.name')) ?></label>
                     <input type="text" name="name" class="input" required maxlength="60"
                            value="<?= e($editing['name'] ?? '') ?>">
                 </div>
                 <div>
-                    <label class="label">Sort order</label>
+                    <label class="label"><?= e(__('lbl.sort_order')) ?></label>
                     <input type="number" name="sort_order" class="input"
                            value="<?= (int)($editing['sort_order'] ?? 0) ?>">
-                    <p class="form-text">Lower numbers show first on the POS.</p>
+                    <p class="form-text"><?= e(__('cat.sort_help')) ?></p>
                 </div>
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" name="is_active" class="checkbox"
                            <?= (!$editing || (int)$editing['is_active'] === 1) ? 'checked' : '' ?>>
-                    <span class="text-sm">Active (shown on the POS)</span>
+                    <span class="text-sm"><?= e(__('cat.active_help')) ?></span>
                 </label>
 
                 <div class="flex gap-2 pt-1">
-                    <button class="btn btn-brand"><?= $editing ? 'Save changes' : 'Add category' ?></button>
+                    <button class="btn btn-brand"><?= e($editing ? __('btn.save_changes') : __('cat.add')) ?></button>
                     <?php if ($editing): ?>
-                        <a class="btn btn-outline" href="<?= url('admin/categories.php') ?>">Cancel</a>
+                        <a class="btn btn-outline" href="<?= url('admin/categories.php') ?>"><?= e(__('btn.cancel')) ?></a>
                     <?php endif; ?>
                 </div>
             </form>
@@ -104,8 +104,8 @@ require __DIR__ . '/../core/header.php';
     <div class="card overflow-x-auto">
     <table class="tbl">
         <thead><tr>
-            <th>#</th><th>Name</th><th class="text-center">Items</th>
-            <th class="text-center">Status</th><th class="text-right">Actions</th>
+            <th>#</th><th><?= e(__('lbl.name')) ?></th><th class="text-center"><?= e(__('cat.items')) ?></th>
+            <th class="text-center"><?= e(__('lbl.status')) ?></th><th class="text-right"><?= e(__('lbl.actions')) ?></th>
         </tr></thead>
         <tbody>
         <?php foreach ($rows as $r): ?>
@@ -115,18 +115,18 @@ require __DIR__ . '/../core/header.php';
                 <td class="text-center"><?= (int)$r['item_count'] ?></td>
                 <td class="text-center">
                     <span class="badge <?= (int)$r['is_active'] ? 'badge-success' : 'badge-secondary' ?>">
-                        <?= (int)$r['is_active'] ? 'Active' : 'Hidden' ?>
+                        <?= e((int)$r['is_active'] ? __('st.active') : __('lbl.hidden')) ?>
                     </span>
                 </td>
                 <td class="text-right text-nowrap">
                     <a class="btn btn-outline btn-sm"
-                       href="<?= url('admin/categories.php?edit=' . (int)$r['id']) ?>">Edit</a>
+                       href="<?= url('admin/categories.php?edit=' . (int)$r['id']) ?>"><?= e(__('btn.edit')) ?></a>
                     <form method="post" class="inline"
-                          onsubmit="return confirm('Delete this category?');">
+                          onsubmit="return confirm(<?= e(json_encode(__('cat.delete_confirm'))) ?>);">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
-                        <button class="btn btn-outline-danger btn-sm">Delete</button>
+                        <button class="btn btn-outline-danger btn-sm"><?= e(__('btn.delete')) ?></button>
                     </form>
                 </td>
             </tr>

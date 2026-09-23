@@ -11,6 +11,13 @@
 
     var $ = function (id) { return document.getElementById(id); };
 
+    /* Translated UI text from pos.php; {name} placeholders are filled in. */
+    function T(key, vars) {
+        var s = (cfg.i18n && cfg.i18n[key]) || key;
+        Object.keys(vars || {}).forEach(function (k) { s = s.split('{' + k + '}').join(vars[k]); });
+        return s;
+    }
+
     function money(n) {
         return cfg.currency + Number(n || 0).toFixed(2);
     }
@@ -85,7 +92,7 @@
     var edit     = cfg.editOrder || null;
     var existing = edit ? edit.lines : [];
 
-    var STATUS_LABEL = { pending: 'waiting', preparing: 'cooking', served: 'served' };
+    var STATUS_LABEL = { pending: T('st_pending'), preparing: T('st_preparing'), served: T('st_served') };
 
     function existingSubtotal() {
         return existing.reduce(function (s, l) { return s + Number(l.line_total); }, 0);
@@ -105,7 +112,7 @@
             nm.appendChild(document.createTextNode(l.qty + ' × ' + l.name));
             nm.appendChild(document.createElement('br'));
             var sm = document.createElement('small');
-            sm.textContent = (l.round > 1 ? 'Round ' + l.round + ' · ' : '') + (STATUS_LABEL[l.kitchen_status] || l.kitchen_status);
+            sm.textContent = (l.round > 1 ? T('round', { n: l.round }) + ' · ' : '') + (STATUS_LABEL[l.kitchen_status] || l.kitchen_status);
             nm.appendChild(sm);
             row.appendChild(nm);
 
@@ -113,7 +120,7 @@
                 var less = document.createElement('button');
                 less.type = 'button';
                 less.className = 'qty-btn';
-                less.title = 'Reduce by one';
+                less.title = T('reduce_one');
                 less.textContent = '-';
                 less.addEventListener('click', function () { updateLine(l, l.qty - 1); });
                 row.appendChild(less);
@@ -121,15 +128,15 @@
                 var drop = document.createElement('button');
                 drop.type = 'button';
                 drop.className = 'qty-btn text-danger';
-                drop.title = 'Remove from order';
+                drop.title = T('remove');
                 drop.textContent = '×';
                 drop.addEventListener('click', function () { updateLine(l, 0); });
                 row.appendChild(drop);
             } else {
                 var lock = document.createElement('small');
                 lock.className = 'text-muted';
-                lock.title = 'The kitchen has started this item. Only an admin void can remove it.';
-                lock.textContent = 'locked';
+                lock.title = T('locked_help');
+                lock.textContent = T('locked');
                 row.appendChild(lock);
             }
 
@@ -145,8 +152,8 @@
     /* Reduce (qty > 0) or remove (qty = 0) a line already on the order. */
     function updateLine(line, qty) {
         var msg = qty === 0
-            ? 'Remove ' + line.name + ' from this order?'
-            : 'Reduce ' + line.name + ' to ' + qty + '?';
+            ? T('confirm_remove', { name: line.name })
+            : T('confirm_reduce', { name: line.name, n: qty });
         if (!confirm(msg)) { return; }
 
         fetch(cfg.lineUrl, {
@@ -157,16 +164,16 @@
         .then(function (r) { return r.json(); })
         .then(function (res) {
             if (!res.ok) {
-                alert(res.error || 'The order could not be changed.');
+                alert(res.error || T('change_failed'));
                 return;
             }
             existing = res.lines;
             renderExisting();
             renderCart();
-            toast(qty === 0 ? line.name + ' removed.' : line.name + ' reduced to ' + qty + '.');
+            toast(qty === 0 ? T('removed', { name: line.name }) : T('reduced', { name: line.name, n: qty }));
         })
         .catch(function () {
-            alert('Could not reach the server. Check that Apache and MySQL are running.');
+            alert(T('no_server'));
         });
     }
 
@@ -196,8 +203,8 @@
             var p = document.createElement('div');
             p.className = 'empty-cart';
             p.textContent = edit
-                ? 'Tap a menu item to add it to this order.'
-                : 'Tap a menu item to start an order.';
+                ? T('tap_add')
+                : T('tap_start');
             box.appendChild(p);
         }
 
@@ -210,7 +217,7 @@
             nm.innerHTML = '';
             nm.appendChild(document.createTextNode(l.name));
             var sm = document.createElement('small');
-            sm.textContent = ' ' + money(l.price) + ' each';
+            sm.textContent = ' ' + T('each', { price: money(l.price) });
             nm.appendChild(document.createElement('br'));
             nm.appendChild(sm);
 
@@ -262,7 +269,7 @@
     /* -------------------------------------------------- submit */
     function submitOrder(action) {
         if (cart.length === 0) {
-            alert(edit ? 'Tap the items to add first.' : 'The order is empty.');
+            alert(edit ? T('tap_first') : T('empty'));
             return;
         }
 
@@ -271,11 +278,11 @@
 
         if (action === 'pay') {
             if (!cfg.hasShift) {
-                alert('Open your cash drawer shift before taking payment.');
+                alert(T('open_shift'));
                 return;
             }
             if (paid + 0.001 < t.total) {
-                alert('Amount paid is less than the total (' + money(t.total) + ').');
+                alert(T('underpaid', { total: money(t.total) }));
                 return;
             }
         }
@@ -303,7 +310,7 @@
         .then(function (res) {
             setBusy(false);
             if (!res.ok) {
-                alert(res.error || 'The order could not be saved.');
+                alert(res.error || T('save_failed'));
                 return;
             }
             if (action === 'pay') {
@@ -316,12 +323,12 @@
             }
             resetCart();
             toast(action === 'pay'
-                ? 'Paid. Order ' + res.order_no + ' saved.'
-                : 'Order ' + res.order_no + ' sent to the kitchen.');
+                ? T('paid_saved', { no: res.order_no })
+                : T('sent_kitchen', { no: res.order_no }));
         })
         .catch(function () {
             setBusy(false);
-            alert('Could not reach the server. Check that Apache and MySQL are running.');
+            alert(T('no_server'));
         });
     }
 
@@ -379,7 +386,7 @@
     $('discount').addEventListener('input', renderCart);
     if ($('paidAmount')) { $('paidAmount').addEventListener('input', renderChange); }
     $('clearCart').addEventListener('click', function () {
-        if (cart.length === 0 || confirm('Clear the current order?')) { resetCart(); }
+        if (cart.length === 0 || confirm(T('confirm_clear'))) { resetCart(); }
     });
     $('btnHold').addEventListener('click', function () { submitOrder('hold'); });
     if ($('btnCharge')) {

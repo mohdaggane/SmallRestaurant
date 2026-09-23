@@ -87,9 +87,9 @@ function company_access(array $c): string
 function company_block_message(string $access): string
 {
     return match ($access) {
-        'suspended'     => 'This restaurant account has been suspended. Contact the platform administrator.',
-        'trial_expired' => 'The free trial for this restaurant has ended. Ask your administrator to choose a plan.',
-        default         => 'This restaurant\'s subscription has expired. Ask your administrator to renew it.',
+        'suspended'     => __('auth.block_suspended'),
+        'trial_expired' => __('auth.block_trial'),
+        default         => __('auth.block_expired'),
     };
 }
 
@@ -149,7 +149,7 @@ function require_role(string ...$roles): void
         return;
     }
     http_response_code(403);
-    flash('You do not have access to that page.', 'danger');
+    flash(__('msg.no_access'), 'danger');
     redirect(home_for_role(user_role()));
 }
 

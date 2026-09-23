@@ -74,6 +74,12 @@ define('BASE_URL', rtrim($prefix, '/'));
 require_once __DIR__ . '/helper_functions.php';
 require_once __DIR__ . '/sessions.php';
 
+// ---------------------------------------------------------------- UI text
+/**
+ * @var array<string,string> $LANG interface strings, read by __() in helper_functions.php
+ */
+$LANG = require __DIR__ . '/lang/en.php';
+
 // ---------------------------------------------------------------- settings
 /**
  * @var array<string,string> $SETTINGS the signed-in company's shop config.
@@ -84,4 +90,16 @@ if (company_id() > 0) {
     foreach (db_all('SELECT setting_key, setting_value FROM settings WHERE company_id = ?', [company_id()]) as $row) {
         $SETTINGS[$row['setting_key']] = (string)$row['setting_value'];
     }
+}
+
+/**
+ * @var array<string,string> $PLATFORM_SETTINGS global platform owner configuration.
+ */
+$PLATFORM_SETTINGS = [];
+try {
+    foreach (db_all('SELECT setting_key, setting_value FROM platform_settings') as $row) {
+        $PLATFORM_SETTINGS[$row['setting_key']] = (string)$row['setting_value'];
+    }
+} catch (mysqli_sql_exception $e) {
+    // If the table is not created yet
 }

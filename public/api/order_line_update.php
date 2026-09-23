@@ -14,7 +14,7 @@ csrf_check(true);
 
 $body = json_decode((string)file_get_contents('php://input'), true);
 if (!is_array($body)) {
-    json_out(['ok' => false, 'error' => 'Malformed request.'], 400);
+    json_out(['ok' => false, 'error' => __('msg.malformed')], 400);
 }
 
 $orderId = (int)($body['order_id'] ?? 0);
@@ -22,38 +22,37 @@ $lineId  = (int)($body['line_id'] ?? 0);
 $qty     = (int)($body['qty'] ?? -1);
 
 if ($orderId <= 0 || $lineId <= 0 || $qty < 0) {
-    json_out(['ok' => false, 'error' => 'Missing order, line or quantity.'], 422);
+    json_out(['ok' => false, 'error' => __('msg.missing')], 422);
 }
 
 $conn->begin_transaction();
 try {
     $order = db_one('SELECT * FROM orders WHERE id = ? AND company_id = ? FOR UPDATE', [$orderId, company_id()]);
     if (!$order) {
-        throw new OrderException('That order no longer exists.', 404);
+        throw new OrderException(__('msg.order_gone'), 404);
     }
     if ($order['status'] !== 'open') {
-        throw new OrderException('Order ' . $order['order_no'] . ' is already ' . $order['status'] . '.', 409);
+        throw new OrderException(__('msg.order_already', '', ['no' => $order['order_no'], 'status' => mb_strtolower(__('ost.' . $order['status'], $order['status']))]), 409);
     }
 
     $line = db_one('SELECT * FROM order_items WHERE id = ? AND order_id = ? AND company_id = ?', [$lineId, $orderId, company_id()]);
     if (!$line) {
-        throw new OrderException('That item is not on this order.', 404);
+        throw new OrderException(__('msg.line_gone'), 404);
     }
     if (!line_is_removable($line)) {
         throw new OrderException(
-            $line['item_name'] . ' is already ' . $line['kitchen_status'] . ' in the kitchen. '
-            . 'Only an admin can remove it by voiding the order.',
+            __('msg.line_locked', '', ['name' => $line['item_name'], 'status' => __('ks.' . $line['kitchen_status'], $line['kitchen_status'])]),
             409
         );
     }
     if ($qty > (int)$line['qty']) {
-        throw new OrderException('Use the menu to add more — this screen only reduces.', 422);
+        throw new OrderException(__('msg.only_reduce'), 422);
     }
 
     if ($qty === 0) {
         $lineCount = (int)db_value('SELECT COUNT(*) FROM order_items WHERE order_id = ? AND company_id = ?', [$orderId, company_id()]);
         if ($lineCount <= 1) {
-            throw new OrderException('That is the last item on the order — void the order instead.', 409);
+            throw new OrderException(__('msg.last_item'), 409);
         }
         db_exec('DELETE FROM order_items WHERE id = ? AND company_id = ?', [$lineId, company_id()]);
     } else {
@@ -70,7 +69,7 @@ try {
     json_out(['ok' => false, 'error' => $e->getMessage()], $e->getCode() ?: 422);
 } catch (Throwable $e) {
     $conn->rollback();
-    json_out(['ok' => false, 'error' => 'Could not update the order: ' . $e->getMessage()], 500);
+    json_out(['ok' => false, 'error' => __('msg.update_failed', '', ['error' => $e->getMessage()])], 500);
 }
 
 json_out([

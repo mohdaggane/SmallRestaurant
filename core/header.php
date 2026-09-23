@@ -18,8 +18,10 @@ $pageTitle = $pageTitle ?? 'Dashboard';
 $layout    = $layout    ?? 'app';
 $platform  = $platform ?? false;
 $u         = $platform ? null : current_user();
-$brandName = $platform ? 'Platform Admin' : setting('shop_name', 'Small Restaurant');
-$brandTag  = $platform ? 'Restaurants · plans · payments' : setting('shop_tagline', 'Tea & Food');
+$platformCompany = platform_setting('company_name', 'SAHAN ICT');
+$platformSystem  = platform_setting('system_name', 'Restaurant POS');
+$brandName = $platform ? $platformCompany : setting('shop_name', 'Small Restaurant');
+$brandTag  = $platform ? ($platformSystem . ' · ' . __('nav.platform_admin', 'Platform Admin')) : setting('shop_tagline', 'Tea & Food');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -127,8 +129,19 @@ $brandTag  = $platform ? 'Restaurants · plans · payments' : setting('shop_tagl
         </button>
         <?php endif; ?>
 
-        <a href="<?= url('') ?>" class="flex items-center gap-2 text-sm leading-tight no-underline text-white group min-w-0">
-            <span class="text-2xl flex-shrink-0">☕</span>
+        <a href="<?= url($platform ? 'platform/index.php' : '') ?>" class="flex items-center gap-2.5 text-sm leading-tight no-underline text-white group min-w-0">
+            <?php if ($platform && platform_logo_url()): ?>
+                <img src="<?= e(platform_logo_url()) ?>" alt="Logo" class="w-8 h-8 rounded-lg object-contain bg-white/10 p-0.5 flex-shrink-0">
+            <?php elseif ($platform): ?>
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-white/15 text-white flex-shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M17 6s-2-2-5-2-5 1.8-5 4c0 2.5 2.5 3.5 5 4.5s5 2 5 4.5c0 2.2-2 3-5 3s-5-2-5-2"
+                              stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            <?php else: ?>
+                <span class="text-2xl flex-shrink-0">☕</span>
+            <?php endif; ?>
             <span class="hidden sm:block min-w-0">
                 <strong class="font-semibold block truncate"><?= e($brandName) ?></strong>
                 <small class="block opacity-75 text-xs truncate"><?= e($brandTag) ?></small>
@@ -140,34 +153,33 @@ $brandTag  = $platform ? 'Restaurants · plans · payments' : setting('shop_tagl
     <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
         <?php if ($u && has_role('cashier', 'waiter', 'admin')): ?>
             <a class="btn btn-accent btn-sm" href="<?= url('public/pos.php') ?>">
-                <span class="topbar-action-label">POS</span>
-                <span class="sm:hidden" title="POS Terminal">🧾</span>
-                <span class="hidden sm:inline">Terminal</span>
+                <span class="topbar-action-label"><?= e(__('nav.pos', 'POS')) ?></span>
+                <span class="sm:hidden" title="<?= e(__('topbar.pos_terminal', 'POS Terminal')) ?>">🧾</span>
             </a>
         <?php endif; ?>
         <?php if ($u && has_role('kitchen', 'admin')): ?>
             <a class="btn btn-outline btn-sm border-white/40 text-white hover:bg-white/10" href="<?= url('public/kitchen.php') ?>">
-                <span class="hidden sm:inline">Kitchen</span>
+                <span class="hidden sm:inline"><?= e(__('nav.kitchen', 'Kitchen')) ?></span>
                 <span class="sm:hidden" title="Kitchen">👨‍🍳</span>
             </a>
         <?php endif; ?>
         <?php if ($u): ?>
             <span class="hidden sm:block text-xs leading-tight text-right opacity-90">
                 <?= e($u['full_name']) ?><br>
-                <span class="opacity-70"><?= e(ucfirst($u['role'])) ?></span>
+                <span class="opacity-70"><?= e(__('role.' . $u['role'], ucfirst($u['role']))) ?></span>
             </span>
             <a class="btn btn-outline btn-sm border-white/40 text-white hover:bg-white/10" href="<?= url('public/logout.php') ?>">
-                <span class="hidden sm:inline">Sign out</span>
+                <span class="hidden sm:inline"><?= e(__('btn.logout', 'Sign out')) ?></span>
                 <span class="sm:hidden" title="Sign out">↪</span>
             </a>
         <?php endif; ?>
         <?php if ($platform && platform_user()): ?>
             <span class="hidden sm:block text-xs leading-tight text-right opacity-90">
                 <?= e(platform_user()['full_name']) ?><br>
-                <span class="opacity-70">Platform owner</span>
+                <span class="opacity-70"><?= e(__('topbar.platform_owner', 'Platform owner')) ?></span>
             </span>
             <a class="btn btn-outline btn-sm border-white/40 text-white hover:bg-white/10" href="<?= url('platform/logout.php') ?>">
-                <span class="hidden sm:inline">Sign out</span>
+                <span class="hidden sm:inline"><?= e(__('btn.logout', 'Sign out')) ?></span>
                 <span class="sm:hidden" title="Sign out">↪</span>
             </a>
         <?php endif; ?>

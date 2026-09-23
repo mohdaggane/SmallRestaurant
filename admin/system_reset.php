@@ -24,7 +24,7 @@ if (is_post()) {
     $confirm = trim(post('confirm_word'));
 
     if ($confirm !== 'RESET') {
-        $error = 'You must type RESET (all caps) to confirm.';
+        $error = __('rs.err_word');
     } else {
         $conn->begin_transaction();
         try {
@@ -46,18 +46,18 @@ if (is_post()) {
             );
 
             $conn->commit();
-            flash('System reset complete. All orders, expenses, and shifts have been cleared. Users and menu are intact.', 'warning');
+            flash(__('rs.done'), 'warning');
             redirect('admin/index.php');
         } catch (Throwable $e) {
             $conn->rollback();
-            flash('Reset failed — nothing was deleted: ' . $e->getMessage(), 'danger');
+            flash(__('rs.failed', '', ['error' => $e->getMessage()]), 'danger');
             redirect('admin/system_reset.php');
         }
     }
 }
 
 $lastReset = setting('last_reset_at', '');
-$pageTitle = 'System Reset';
+$pageTitle = __('nav.system_reset');
 require __DIR__ . '/../core/header.php';
 ?>
 
@@ -68,11 +68,9 @@ require __DIR__ . '/../core/header.php';
         <div class="flex items-start gap-3">
             <span class="text-3xl">⚠️</span>
             <div>
-                <h2 class="text-bad font-bold text-base mb-1">Danger zone — this cannot be undone</h2>
+                <h2 class="text-bad font-bold text-base mb-1"><?= e(__('rs.danger')) ?></h2>
                 <p class="text-sm text-red-800">
-                    This will permanently delete <strong>all orders, expenses, and cash drawer shifts</strong>.
-                    Your users, menu items, categories, and settings will be preserved.
-                    Use this to start fresh at the beginning of a new season or after testing.
+                    <?= strtr(e(__('rs.intro')), ['{bold}' => '<strong>' . e(__('rs.intro_bold')) . '</strong>']) ?>
                 </p>
             </div>
         </div>
@@ -80,18 +78,18 @@ require __DIR__ . '/../core/header.php';
 
     <!-- What will be deleted -->
     <div class="card mb-5">
-        <div class="card-header text-bad">What will be deleted</div>
+        <div class="card-header text-bad"><?= e(__('rs.what')) ?></div>
         <table class="tbl">
             <tbody>
-                <tr><td>Orders (all statuses)</td><td class="text-right font-semibold text-bad"><?= number_format($counts['orders']) ?></td></tr>
-                <tr><td>Expenses records</td><td class="text-right font-semibold text-bad"><?= number_format($counts['expenses']) ?></td></tr>
-                <tr><td>Cash drawer shifts</td><td class="text-right font-semibold text-bad"><?= number_format($counts['shifts']) ?></td></tr>
+                <tr><td><?= e(__('rs.orders')) ?></td><td class="text-right font-semibold text-bad"><?= number_format($counts['orders']) ?></td></tr>
+                <tr><td><?= e(__('rs.expenses')) ?></td><td class="text-right font-semibold text-bad"><?= number_format($counts['expenses']) ?></td></tr>
+                <tr><td><?= e(__('rs.shifts')) ?></td><td class="text-right font-semibold text-bad"><?= number_format($counts['shifts']) ?></td></tr>
             </tbody>
         </table>
         <div class="card-footer text-xs text-muted">
-            Users, menu items, categories, and settings are <strong>not</strong> affected.
+            <?= strtr(e(__('rs.not_affected')), ['{not}' => '<strong>' . e(__('rs.not')) . '</strong>']) ?>
             <?php if ($lastReset): ?>
-                Last reset was on <?= dt($lastReset, 'd M Y, g:i A') ?>.
+                <?= e(__('rs.last', '', ['date' => dt($lastReset, 'd M Y, g:i A')])) ?>
             <?php endif; ?>
         </div>
     </div>
@@ -102,23 +100,23 @@ require __DIR__ . '/../core/header.php';
 
     <!-- Confirm form -->
     <div class="card">
-        <div class="card-header">Confirm reset</div>
+        <div class="card-header"><?= e(__('rs.confirm_h')) ?></div>
         <div class="card-body">
             <form method="post" class="space-y-4"
-                  onsubmit="return confirm('Are you absolutely sure? This CANNOT be undone.');">
+                  onsubmit="return confirm(<?= e(json_encode(__('rs.sure'))) ?>);">
                 <?= csrf_field() ?>
                 <div>
                     <label class="label" for="confirm_word">
-                        Type <strong class="text-bad font-mono">RESET</strong> to confirm
+                        <?= strtr(e(__('rs.type_to')), ['{word}' => '<strong class="text-bad font-mono">RESET</strong>']) ?>
                     </label>
                     <input type="text" id="confirm_word" name="confirm_word" class="input font-mono tracking-widest"
                            placeholder="RESET" autocomplete="off" autofocus>
                 </div>
                 <div class="flex gap-3">
                     <button class="btn btn-danger btn-lg" id="resetBtn" disabled>
-                        🗑️ Reset system data
+                        <?= e(__('rs.button')) ?>
                     </button>
-                    <a class="btn btn-outline btn-lg" href="<?= url('admin/index.php') ?>">Cancel</a>
+                    <a class="btn btn-outline btn-lg" href="<?= url('admin/index.php') ?>"><?= e(__('btn.cancel')) ?></a>
                 </div>
             </form>
         </div>

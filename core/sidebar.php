@@ -8,20 +8,20 @@
 $current = basename($_SERVER['SCRIPT_NAME'] ?? '');
 
 $nav = [
-    ['Dashboard',    'admin/index.php',        '📊', ['admin']],
-    ['POS Terminal', 'public/pos.php',         '🧾', ['admin', 'cashier', 'waiter']],
-    ['Open Orders',  'public/orders.php',      '🍽️', ['admin', 'cashier', 'waiter']],
-    ['Kitchen',      'public/kitchen.php',     '👨‍🍳', ['admin', 'kitchen']],
-    ['Sales',        'admin/sales.php',        '💵', ['admin', 'cashier']],
-    ['Menu Items',   'admin/menu_items.php',   '🥘', ['admin']],
-    ['Categories',   'admin/categories.php',   '🗂️', ['admin']],
-    ['Expenses',     'admin/expenses.php',     '📉', ['admin', 'cashier']],
-    ['Cash Drawer',  'admin/shifts.php',       '🧮', ['admin', 'cashier']],
-    ['Reports',      'admin/report_daily.php', '📈', ['admin', 'cashier']],
-    ['Users',        'admin/users.php',        '👥', ['admin']],
-    ['Settings',     'admin/settings.php',     '⚙️', ['admin']],
-    ['Billing',      'admin/billing.php',      '💳', ['admin']],
-    ['System Reset', 'admin/system_reset.php', '🗑️', ['admin']],
+    [__('nav.dashboard',    'Dashboard'),    'admin/index.php',        '📊', ['admin']],
+    [__('nav.pos',          'POS Terminal'), 'public/pos.php',         '🧾', ['admin', 'cashier', 'waiter']],
+    [__('nav.open_orders',  'Open Orders'),  'public/orders.php',      '🍽️', ['admin', 'cashier', 'waiter']],
+    [__('nav.kitchen',      'Kitchen'),      'public/kitchen.php',     '👨‍🍳', ['admin', 'kitchen']],
+    [__('nav.sales',        'Sales'),        'admin/sales.php',        '💵', ['admin', 'cashier']],
+    [__('nav.menu_items',   'Menu Items'),   'admin/menu_items.php',   '🥘', ['admin']],
+    [__('nav.categories',   'Categories'),   'admin/categories.php',   '🗂️', ['admin']],
+    [__('nav.expenses',     'Expenses'),     'admin/expenses.php',     '📉', ['admin', 'cashier']],
+    [__('nav.cash_drawer',  'Cash Drawer'),  'admin/shifts.php',       '🧮', ['admin', 'cashier']],
+    [__('nav.reports',      'Reports'),      'admin/report_daily.php', '📈', ['admin', 'cashier']],
+    [__('nav.users',        'Users'),        'admin/users.php',        '👥', ['admin']],
+    [__('nav.settings',     'Settings'),     'admin/settings.php',     '⚙️', ['admin']],
+    [__('nav.billing',      'Billing'),      'admin/billing.php',      '💳', ['admin']],
+    [__('nav.system_reset', 'System Reset'), 'admin/system_reset.php', '🗑️', ['admin']],
 ];
 ?>
 <aside id="appSidebar" class="app-sidebar">

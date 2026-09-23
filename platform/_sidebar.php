@@ -8,17 +8,27 @@
 $current = basename($_SERVER['SCRIPT_NAME'] ?? '');
 
 $nav = [
-    ['Restaurants', 'platform/index.php', '🏪', ['index.php', 'company.php']],
-    ['Plans',       'platform/plans.php', '📦', ['plans.php']],
+    [__('pf.restaurants', 'Restaurants'), 'platform/index.php', '🏪', ['index.php', 'company.php']],
+    [__('pf.plans',       'Plans'),       'platform/plans.php', '📦', ['plans.php']],
+    [__('pf.settings',    'Settings'),    'platform/settings.php', '⚙️', ['settings.php']],
 ];
 ?>
 <aside id="appSidebar" class="app-sidebar">
     <!-- Brand shown inside sidebar on mobile -->
     <div class="flex items-center gap-2 px-4 py-3 border-b border-line md:hidden">
-        <span class="text-xl">☕</span>
+        <?php if (platform_logo_url()): ?>
+            <img src="<?= e(platform_logo_url()) ?>" alt="Logo" class="w-8 h-8 rounded-lg object-contain">
+        <?php else: ?>
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white" style="background: linear-gradient(135deg, #1e2f6e, #1a7fe8);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M17 6s-2-2-5-2-5 1.8-5 4c0 2.5 2.5 3.5 5 4.5s5 2 5 4.5c0 2.2-2 3-5 3s-5-2-5-2"
+                          stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+                </svg>
+            </div>
+        <?php endif; ?>
         <div class="min-w-0">
-            <div class="font-semibold text-sm text-ink truncate">Platform Admin</div>
-            <div class="text-xs text-muted truncate">Restaurants · plans · payments</div>
+            <div class="font-bold text-sm text-ink truncate"><?= e(platform_setting('company_name', 'SAHAN ICT')) ?></div>
+            <div class="text-[10px] text-muted font-semibold uppercase tracking-wider truncate"><?= e(platform_setting('system_name', 'Restaurant POS')) ?></div>
         </div>
     </div>
 

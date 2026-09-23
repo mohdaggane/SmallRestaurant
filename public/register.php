@@ -25,7 +25,7 @@ function make_slug(string $text): string
     return substr($slug, 0, 30);
 }
 
-$STARTER_CATEGORIES = ['Hot Drinks', 'Cold Drinks', 'Breakfast', 'Main Dishes', 'Snacks'];
+$STARTER_CATEGORIES = array_map(fn($k) => __('reg.cat_' . $k), ['hot', 'cold', 'breakfast', 'mains', 'snacks']);
 
 $f = [
     'company_name' => '', 'slug' => '', 'phone' => '',
@@ -48,31 +48,33 @@ if (is_post()) {
     $lastAt = (int)($_SESSION['registered_at'] ?? 0);
 
     if (post('website') !== '') {
-        $errors[] = 'Sign-up refused.';          // honeypot: only bots fill the hidden field
+        $errors[] = __('reg.err_refused');          // honeypot: only bots fill the hidden field
     } elseif ($lastAt > time() - 60) {
-        $errors[] = 'Please wait a minute before registering another restaurant.';
+        $errors[] = __('reg.err_wait');
     }
     if (mb_strlen($f['company_name']) < 2 || mb_strlen($f['company_name']) > 100) {
-        $errors[] = 'Enter the restaurant name.';
+        $errors[] = __('reg.err_name');
     }
     if (strlen($f['slug']) < 3) {
-        $errors[] = 'The short name needs at least 3 letters or digits.';
+        $errors[] = __('reg.err_slug_short');
     } elseif (db_value('SELECT id FROM companies WHERE slug = ?', [$f['slug']]) !== null) {
-        $errors[] = 'Another restaurant already uses the short name "' . $f['slug'] . '". Choose another.';
+        $errors[] = __('reg.err_slug_taken', '', ['slug' => $f['slug']]);
     }
     if ($f['full_name'] === '') {
-        $errors[] = 'Enter your full name.';
+        $errors[] = __('reg.err_full_name');
     }
     if (!preg_match('/^[A-Za-z0-9._@-]{3,50}$/', $f['username'])) {
-        $errors[] = 'The username needs 3–50 letters, digits or . _ @ - (no spaces).';
+        $errors[] = __('reg.err_username');
     } elseif (db_value('SELECT id FROM users WHERE username = ?', [$f['username']]) !== null) { // tenant-global: usernames are unique system-wide
-        $errors[] = 'The username "' . $f['username'] . '" is taken. Try "'
-            . $f['username'] . '.' . ($f['slug'] ?: 'yourshop') . '".';
+        $errors[] = __('reg.err_username_taken', '', [
+            'username' => $f['username'],
+            'suggest'  => $f['username'] . '.' . ($f['slug'] ?: 'yourshop'),
+        ]);
     }
     if (strlen($password) < 6) {
-        $errors[] = 'Choose a password of at least 6 characters.';
+        $errors[] = __('reg.err_pw_short');
     } elseif ($password !== $password2) {
-        $errors[] = 'The two passwords do not match.';
+        $errors[] = __('reg.err_pw_match');
     }
 
     if (!$errors) {
@@ -99,8 +101,8 @@ if (is_post()) {
             $conn->rollback();
             // 1062 = duplicate key: someone took the name or username a moment ago.
             $errors[] = $e->getCode() === 1062
-                ? 'That short name or username was just taken. Please choose another.'
-                : 'Could not create the restaurant: ' . $e->getMessage();
+                ? __('reg.err_dup')
+                : __('reg.err_create', '', ['error' => $e->getMessage()]);
         }
 
         if (!$errors) {
@@ -109,15 +111,21 @@ if (is_post()) {
                 'id' => $userId, 'company_id' => $companyId, 'company_name' => $f['company_name'],
                 'full_name' => $f['full_name'], 'username' => $f['username'], 'role' => 'admin',
             ]);
-            flash('Welcome! ' . $f['company_name'] . ' is ready. Your free trial runs for ' . TRIAL_DAYS . ' days.');
+            flash(__('reg.welcome', '', ['name' => $f['company_name'], 'days' => TRIAL_DAYS]));
             redirect('admin/index.php');
         }
     }
 }
 
-$pageTitle = 'Register your restaurant';
+$pageTitle = __('reg.page_title');
 $layout    = 'blank';
 require __DIR__ . '/../core/header.php';
+
+$companyName = platform_setting('company_name', 'SAHAN ICT');
+$systemName  = platform_setting('system_name', 'Restaurant POS');
+$webName     = platform_setting('web_name', 'sahanict.org');
+$webUrl      = platform_setting('web_url', 'https://sahanict.org');
+$logoUrl     = platform_logo_url();
 ?>
 <style>
     :root {
@@ -157,15 +165,19 @@ require __DIR__ . '/../core/header.php';
         <!-- Top Navigation / Logo -->
         <div class="flex items-center justify-between mb-6">
             <a href="<?= url('') ?>" class="flex items-center gap-2.5 no-underline">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow-md text-white" style="background: linear-gradient(135deg, var(--sn), var(--sb));">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                        <path d="M17 6s-2-2-5-2-5 1.8-5 4c0 2.5 2.5 3.5 5 4.5s5 2 5 4.5c0 2.2-2 3-5 3s-5-2-5-2"
-                              stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
-                    </svg>
-                </div>
+                <?php if ($logoUrl !== ''): ?>
+                    <img src="<?= e($logoUrl) ?>" alt="Logo" class="w-9 h-9 rounded-xl object-contain shadow-sm bg-white p-0.5 border border-slate-200">
+                <?php else: ?>
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow-md text-white" style="background: linear-gradient(135deg, var(--sn), var(--sb));">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M17 6s-2-2-5-2-5 1.8-5 4c0 2.5 2.5 3.5 5 4.5s5 2 5 4.5c0 2.2-2 3-5 3s-5-2-5-2"
+                                  stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                <?php endif; ?>
                 <div>
-                    <div class="font-extrabold text-sm tracking-tight" style="color:var(--sn);">SAHAN ICT</div>
-                    <div class="text-[9px] font-bold tracking-widest uppercase" style="color:var(--sb);">Restaurant POS</div>
+                    <div class="font-extrabold text-sm tracking-tight" style="color:var(--sn);"><?= e($companyName) ?></div>
+                    <div class="text-[9px] font-bold tracking-widest uppercase" style="color:var(--sb);"><?= e($systemName) ?></div>
                 </div>
             </a>
 
@@ -174,7 +186,7 @@ require __DIR__ . '/../core/header.php';
                     <line x1="19" y1="12" x2="5" y2="12"></line>
                     <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
-                <span>Back to Home</span>
+                <span><?= e(__('auth.back_home')) ?></span>
             </a>
         </div>
 
@@ -183,13 +195,13 @@ require __DIR__ . '/../core/header.php';
             <div class="mb-6">
                 <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 mb-3">
                     <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-                    <span>Free <?= TRIAL_DAYS ?>-Day Trial · No Credit Card Required</span>
+                    <span><?= e(__('reg.trial_badge', '', ['days' => TRIAL_DAYS])) ?></span>
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-1.5">
-                    Register Your Restaurant
+                    <?= e(__('reg.title')) ?>
                 </h1>
                 <p class="text-slate-500 text-sm leading-relaxed">
-                    Set up your business station in less than 2 minutes. Your data stays 100% private to your company.
+                    <?= e(__('reg.sub')) ?>
                 </p>
             </div>
 
@@ -217,29 +229,29 @@ require __DIR__ . '/../core/header.php';
                 <!-- Company Details Section -->
                 <div>
                     <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-                        Restaurant Details
+                        <?= e(__('reg.sec_restaurant')) ?>
                     </h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="sm:col-span-2">
                             <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="company_name">
-                                Restaurant Name *
+                                <?= e(__('reg.restaurant_name')) ?>
                             </label>
                             <input type="text" id="company_name" name="company_name"
                                    class="input-clean block w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white text-slate-900 text-sm rounded-xl border border-slate-200 outline-none"
-                                   maxlength="100" value="<?= e($f['company_name']) ?>" placeholder="e.g. Blue Sea Cafe & Grill" required autofocus>
+                                   maxlength="100" value="<?= e($f['company_name']) ?>" placeholder="<?= e(__('reg.ph_name')) ?>" required autofocus>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="slug">
-                                Short URL Name
+                                <?= e(__('reg.slug')) ?>
                             </label>
                             <input type="text" id="slug" name="slug"
                                    class="input-clean block w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white text-slate-900 text-sm rounded-xl border border-slate-200 outline-none"
                                    maxlength="30" value="<?= e($f['slug']) ?>" placeholder="bluesea-cafe">
-                            <small class="text-slate-400 text-[11px] block mt-1">Letters, numbers and dashes.</small>
+                            <small class="text-slate-400 text-[11px] block mt-1"><?= e(__('reg.slug_help')) ?></small>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="phone">
-                                Business Phone
+                                <?= e(__('reg.phone')) ?>
                             </label>
                             <input type="text" id="phone" name="phone"
                                    class="input-clean block w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white text-slate-900 text-sm rounded-xl border border-slate-200 outline-none"
@@ -250,41 +262,41 @@ require __DIR__ . '/../core/header.php';
 
                 <div class="border-t border-slate-100 pt-5">
                     <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-                        Administrator Account
+                        <?= e(__('reg.sec_admin')) ?>
                     </h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="sm:col-span-2">
                             <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="full_name">
-                                Your Full Name *
+                                <?= e(__('reg.full_name')) ?>
                             </label>
                             <input type="text" id="full_name" name="full_name"
                                    class="input-clean block w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white text-slate-900 text-sm rounded-xl border border-slate-200 outline-none"
-                                   maxlength="100" value="<?= e($f['full_name']) ?>" placeholder="e.g. Ahmed Ali" required>
+                                   maxlength="100" value="<?= e($f['full_name']) ?>" placeholder="<?= e(__('reg.ph_full_name')) ?>" required>
                         </div>
                         <div class="sm:col-span-2">
                             <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="username">
-                                Admin Username *
+                                <?= e(__('reg.username')) ?>
                             </label>
                             <input type="text" id="username" name="username"
                                    class="input-clean block w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white text-slate-900 text-sm rounded-xl border border-slate-200 outline-none"
                                    maxlength="50" value="<?= e($f['username']) ?>" placeholder="ahmed.bluesea" required>
-                            <small class="text-slate-400 text-[11px] block mt-1">Unique login identity across all branches.</small>
+                            <small class="text-slate-400 text-[11px] block mt-1"><?= e(__('reg.username_help')) ?></small>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="password">
-                                Password *
+                                <?= e(__('reg.password')) ?>
                             </label>
                             <input type="password" id="password" name="password"
                                    class="input-clean block w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white text-slate-900 text-sm rounded-xl border border-slate-200 outline-none"
-                                   minlength="6" placeholder="Min. 6 chars" required>
+                                   minlength="6" placeholder="<?= e(__('reg.ph_password')) ?>" required>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1.5" for="password2">
-                                Repeat Password *
+                                <?= e(__('reg.password2')) ?>
                             </label>
                             <input type="password" id="password2" name="password2"
                                    class="input-clean block w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white text-slate-900 text-sm rounded-xl border border-slate-200 outline-none"
-                                   minlength="6" placeholder="Repeat password" required>
+                                   minlength="6" placeholder="<?= e(__('reg.ph_password2')) ?>" required>
                         </div>
                     </div>
                 </div>
@@ -292,12 +304,12 @@ require __DIR__ . '/../core/header.php';
                 <div class="bg-slate-50 border border-slate-100 rounded-xl p-3.5">
                     <label class="flex items-start gap-2.5 text-xs sm:text-sm text-slate-700 cursor-pointer">
                         <input type="checkbox" name="starter" value="1" <?= $f['starter'] === '1' ? 'checked' : '' ?> class="mt-0.5 rounded text-blue-600 focus:ring-blue-500">
-                        <span>Pre-populate starter menu categories (Drinks, Breakfast, Mains, Desserts). You can customize them anytime.</span>
+                        <span><?= e(__('reg.starter')) ?></span>
                     </label>
                 </div>
 
                 <button type="submit" class="btn-reg-brand w-full flex items-center justify-center gap-2 py-3.5 px-4 text-white text-sm font-bold rounded-xl cursor-pointer">
-                    <span>Create Restaurant & Start Free Trial</span>
+                    <span><?= e(__('reg.submit')) ?></span>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                         <polyline points="12 5 19 12 12 19"></polyline>
@@ -306,7 +318,7 @@ require __DIR__ . '/../core/header.php';
             </form>
 
             <div class="mt-6 text-center text-xs text-slate-500">
-                Already registered? <a href="<?= url('public/login.php') ?>" class="font-bold text-blue-700 hover:underline">Sign in to your station</a>
+                <?= e(__('reg.already')) ?> <a href="<?= url('public/login.php') ?>" class="font-bold text-blue-700 hover:underline"><?= e(__('reg.sign_in_link')) ?></a>
             </div>
         </div>
 
@@ -314,8 +326,8 @@ require __DIR__ . '/../core/header.php';
 
     <!-- Footer -->
     <footer class="text-center text-xs text-slate-500 pt-6">
-        Made By <a href="https://sahanict.org" target="_blank" rel="noopener noreferrer" class="font-bold text-slate-800 hover:text-blue-600 transition-colors">SAHAN ICT</a> ·
-        <a href="https://sahanict.org" target="_blank" rel="noopener noreferrer" class="text-slate-500 hover:text-blue-600 transition-colors">sahanict.org</a>
+        <?= e(__('auth.made_by')) ?> <a href="<?= e($webUrl) ?>" target="_blank" rel="noopener noreferrer" class="font-bold text-slate-800 hover:text-blue-600 transition-colors"><?= e($companyName) ?></a> ·
+        <a href="<?= e($webUrl) ?>" target="_blank" rel="noopener noreferrer" class="text-slate-500 hover:text-blue-600 transition-colors"><?= e($webName) ?></a>
     </footer>
 </div>
 <script>

@@ -17,7 +17,7 @@ csrf_check(true);
 
 $body = json_decode((string)file_get_contents('php://input'), true);
 if (!is_array($body)) {
-    json_out(['ok' => false, 'error' => 'Malformed request.'], 400);
+    json_out(['ok' => false, 'error' => __('msg.malformed')], 400);
 }
 
 $action  = ($body['action'] ?? 'hold') === 'pay' ? 'pay' : 'hold';
@@ -26,15 +26,15 @@ $orderId = (int)($body['order_id'] ?? 0);
 $isAdd   = $orderId > 0;
 
 if (!$lines) {
-    json_out(['ok' => false, 'error' => 'The order has no items.'], 422);
+    json_out(['ok' => false, 'error' => __('msg.no_items')], 422);
 }
 if ($action === 'pay' && !has_role('admin', 'cashier')) {
-    json_out(['ok' => false, 'error' => 'Only a cashier can take payment.'], 403);
+    json_out(['ok' => false, 'error' => __('msg.cashier_only')], 403);
 }
 
 $shift = has_role('admin', 'cashier') ? open_shift(user_id()) : null;
 if ($action === 'pay' && !$shift) {
-    json_out(['ok' => false, 'error' => 'Open your cash drawer shift before taking payment.'], 409);
+    json_out(['ok' => false, 'error' => __('msg.open_shift')], 409);
 }
 
 $orderType = ($body['order_type'] ?? 'dine_in') === 'takeaway' ? 'takeaway' : 'dine_in';
@@ -53,11 +53,11 @@ try {
         // both read the old totals and overwrite each other.
         $order = db_one('SELECT * FROM orders WHERE id = ? AND company_id = ? FOR UPDATE', [$orderId, company_id()]);
         if (!$order) {
-            throw new OrderException('That order no longer exists.', 404);
+            throw new OrderException(__('msg.order_gone'), 404);
         }
         if ($order['status'] !== 'open') {
             throw new OrderException(
-                'Order ' . $order['order_no'] . ' is already ' . $order['status'] . ' — start a new order instead.',
+                __('msg.order_new', '', ['no' => $order['order_no'], 'status' => mb_strtolower(__('ost.' . $order['status'], $order['status']))]),
                 409
             );
         }
@@ -90,7 +90,7 @@ try {
     json_out(['ok' => false, 'error' => $e->getMessage()], $e->getCode() ?: 422);
 } catch (Throwable $e) {
     $conn->rollback();
-    json_out(['ok' => false, 'error' => 'Could not save the order: ' . $e->getMessage()], 500);
+    json_out(['ok' => false, 'error' => __('msg.save_failed', '', ['error' => $e->getMessage()])], 500);
 }
 
 json_out([

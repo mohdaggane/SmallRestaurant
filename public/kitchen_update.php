@@ -25,9 +25,9 @@ if ($itemId > 0) {
         'UPDATE order_items SET kitchen_status = ? WHERE order_id = ? AND company_id = ? AND needs_prep = 1',
         [$to, $orderId, company_id()]
     );
-    flash('Order marked ' . $to . '.');
+    flash(__('msg.kitchen_marked', '', ['status' => __('ks.' . $to, $to)]));
 } else {
-    flash('Nothing to update.', 'warning');
+    flash(__('msg.nothing'), 'warning');
 }
 
 redirect('public/kitchen.php');

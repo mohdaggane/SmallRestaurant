@@ -25,11 +25,11 @@ if (is_post()) {
             && db_value('SELECT id FROM categories WHERE id = ? AND company_id = ?', [$catId, company_id()]) !== null;
 
         if ($name === '' || !$catOk) {
-            flash('An item needs a name and a category.', 'danger');
+            flash(__('mi.err_name_cat'), 'danger');
         } elseif ($id === 0 && company_limit_reached('menu_items')) {
-            flash('Your plan allows ' . (int)current_company()['max_menu_items'] . ' menu items. Upgrade the plan (Billing) to add more.', 'danger');
+            flash(__('mi.err_limit', '', ['n' => (int)current_company()['max_menu_items']]), 'danger');
         } elseif ($price <= 0) {
-            flash('The selling price must be greater than zero.', 'danger');
+            flash(__('mi.err_price'), 'danger');
         } else {
             if ($id > 0) {
                 db_exec(
@@ -39,7 +39,7 @@ if (is_post()) {
                       WHERE id = ? AND company_id = ?',
                     [$catId, $name, $price, $cost, $prep, $avail, $sort, $id, company_id()]
                 );
-                flash('Menu item updated. Past receipts keep their old price.');
+                flash(__('mi.updated'));
             } else {
                 db_exec(
                     'INSERT INTO menu_items
@@ -47,7 +47,7 @@ if (is_post()) {
                      VALUES (?,?,?,?,?,?,?,?)',
                     [company_id(), $catId, $name, $price, $cost, $prep, $avail, $sort]
                 );
-                flash('Menu item added.');
+                flash(__('mi.added'));
             }
             redirect('admin/menu_items.php');
         }
@@ -63,10 +63,10 @@ if (is_post()) {
         $sold = (int)db_value('SELECT COUNT(*) FROM order_items WHERE menu_item_id = ? AND company_id = ?', [$id, company_id()]);
         if ($sold > 0) {
             db_exec('UPDATE menu_items SET is_available = 0 WHERE id = ? AND company_id = ?', [$id, company_id()]);
-            flash('That item has been sold before, so it was hidden instead of deleted (sales history is kept).', 'warning');
+            flash(__('mi.hidden_instead'), 'warning');
         } else {
             db_exec('DELETE FROM menu_items WHERE id = ? AND company_id = ?', [$id, company_id()]);
-            flash('Menu item deleted.');
+            flash(__('mi.deleted'));
         }
         redirect('admin/menu_items.php');
     }
@@ -89,13 +89,13 @@ if ($filterCat > 0) {
 $sql .= ' ORDER BY c.sort_order, i.sort_order, i.name';
 $items = db_all($sql, $params);
 
-$pageTitle = 'Menu Items';
+$pageTitle = __('nav.menu_items');
 require __DIR__ . '/../core/header.php';
 ?>
 
 <div class="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-4">
     <div class="card">
-        <div class="card-header"><?= $editing ? 'Edit item' : 'New item' ?></div>
+        <div class="card-header"><?= e($editing ? __('mi.edit') : __('mi.new')) ?></div>
         <div class="card-body">
             <form method="post" class="space-y-3">
                 <?= csrf_field() ?>
@@ -103,14 +103,14 @@ require __DIR__ . '/../core/header.php';
                 <input type="hidden" name="id" value="<?= (int)($editing['id'] ?? 0) ?>">
 
                 <div>
-                    <label class="label">Item name</label>
+                    <label class="label"><?= e(__('mi.item_name')) ?></label>
                     <input type="text" name="name" class="input" required maxlength="100"
                            value="<?= e($editing['name'] ?? '') ?>">
                 </div>
                 <div>
-                    <label class="label">Category</label>
+                    <label class="label"><?= e(__('lbl.category')) ?></label>
                     <select name="category_id" class="select" required>
-                        <option value="">Choose…</option>
+                        <option value=""><?= e(__('lbl.choose')) ?></option>
                         <?php foreach ($categories as $c): ?>
                             <option value="<?= (int)$c['id'] ?>"
                                 <?= (int)($editing['category_id'] ?? 0) === (int)$c['id'] ? 'selected' : '' ?>>
@@ -121,38 +121,38 @@ require __DIR__ . '/../core/header.php';
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="label">Selling price</label>
+                        <label class="label"><?= e(__('mi.selling_price')) ?></label>
                         <input type="number" name="price" step="0.01" min="0" class="input" required
                                value="<?= e($editing['price'] ?? '') ?>">
                     </div>
                     <div>
-                        <label class="label">Cost price</label>
+                        <label class="label"><?= e(__('mi.cost_price')) ?></label>
                         <input type="number" name="cost_price" step="0.01" min="0" class="input"
                                value="<?= e($editing['cost_price'] ?? '0.00') ?>">
-                        <p class="form-text">Used for profit in reports.</p>
+                        <p class="form-text"><?= e(__('mi.cost_help')) ?></p>
                     </div>
                 </div>
                 <div>
-                    <label class="label">Sort order</label>
+                    <label class="label"><?= e(__('lbl.sort_order')) ?></label>
                     <input type="number" name="sort_order" class="input"
                            value="<?= (int)($editing['sort_order'] ?? 0) ?>">
                 </div>
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" name="needs_prep" class="checkbox"
                            <?= (!$editing || (int)$editing['needs_prep'] === 1) ? 'checked' : '' ?>>
-                    <span class="text-sm">Send to the kitchen screen</span>
+                    <span class="text-sm"><?= e(__('mi.send_kitchen')) ?></span>
                 </label>
-                <p class="form-text -mt-2">Uncheck for bottled drinks handed over straight away.</p>
+                <p class="form-text -mt-2"><?= e(__('mi.kitchen_help')) ?></p>
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" name="is_available" class="checkbox"
                            <?= (!$editing || (int)$editing['is_available'] === 1) ? 'checked' : '' ?>>
-                    <span class="text-sm">Available for sale</span>
+                    <span class="text-sm"><?= e(__('mi.available')) ?></span>
                 </label>
 
                 <div class="flex gap-2 pt-1">
-                    <button class="btn btn-brand"><?= $editing ? 'Save changes' : 'Add item' ?></button>
+                    <button class="btn btn-brand"><?= e($editing ? __('btn.save_changes') : __('mi.add')) ?></button>
                     <?php if ($editing): ?>
-                        <a class="btn btn-outline" href="<?= url('admin/menu_items.php') ?>">Cancel</a>
+                        <a class="btn btn-outline" href="<?= url('admin/menu_items.php') ?>"><?= e(__('btn.cancel')) ?></a>
                     <?php endif; ?>
                 </div>
             </form>
@@ -163,24 +163,24 @@ require __DIR__ . '/../core/header.php';
         <form class="mb-3" method="get">
             <div class="flex gap-2 items-center">
                 <select name="cat" class="select max-w-[260px]" onchange="this.form.submit()">
-                    <option value="0">All categories</option>
+                    <option value="0"><?= e(__('mi.all_cats')) ?></option>
                     <?php foreach ($categories as $c): ?>
                         <option value="<?= (int)$c['id'] ?>" <?= $filterCat === (int)$c['id'] ? 'selected' : '' ?>>
                             <?= e($c['name']) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <span class="text-muted text-sm"><?= count($items) ?> item(s)</span>
+                <span class="text-muted text-sm"><?= e(__('mi.count', '', ['n' => count($items)])) ?></span>
             </div>
         </form>
 
         <div class="card overflow-x-auto">
         <table class="tbl">
             <thead><tr>
-                <th>Item</th><th>Category</th>
-                <th class="text-right">Price</th><th class="text-right">Cost</th>
-                <th class="text-center">Kitchen</th><th class="text-center">Status</th>
-                <th class="text-right">Actions</th>
+                <th><?= e(__('mi.item')) ?></th><th><?= e(__('lbl.category')) ?></th>
+                <th class="text-right"><?= e(__('mi.price')) ?></th><th class="text-right"><?= e(__('mi.cost')) ?></th>
+                <th class="text-center"><?= e(__('nav.kitchen')) ?></th><th class="text-center"><?= e(__('lbl.status')) ?></th>
+                <th class="text-right"><?= e(__('lbl.actions')) ?></th>
             </tr></thead>
             <tbody>
             <?php foreach ($items as $i): ?>
@@ -192,25 +192,25 @@ require __DIR__ . '/../core/header.php';
                     <td class="text-center"><?= (int)$i['needs_prep'] ? '✔' : '—' ?></td>
                     <td class="text-center">
                         <span class="badge <?= (int)$i['is_available'] ? 'badge-success' : 'badge-secondary' ?>">
-                            <?= (int)$i['is_available'] ? 'On sale' : 'Hidden' ?>
+                            <?= e((int)$i['is_available'] ? __('mi.on_sale') : __('lbl.hidden')) ?>
                         </span>
                     </td>
                     <td class="text-right text-nowrap">
                         <a class="btn btn-outline btn-sm"
-                           href="<?= url('admin/menu_items.php?edit=' . (int)$i['id']) ?>">Edit</a>
+                           href="<?= url('admin/menu_items.php?edit=' . (int)$i['id']) ?>"><?= e(__('btn.edit')) ?></a>
                         <form method="post" class="inline">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="toggle">
                             <input type="hidden" name="id" value="<?= (int)$i['id'] ?>">
                             <button class="btn btn-outline-warning btn-sm">
-                                <?= (int)$i['is_available'] ? 'Hide' : 'Show' ?>
+                                <?= e((int)$i['is_available'] ? __('btn.hide') : __('btn.show')) ?>
                             </button>
                         </form>
-                        <form method="post" class="inline" onsubmit="return confirm('Delete this item?');">
+                        <form method="post" class="inline" onsubmit="return confirm(<?= e(json_encode(__('mi.delete_confirm'))) ?>);">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="id" value="<?= (int)$i['id'] ?>">
-                            <button class="btn btn-outline-danger btn-sm">Delete</button>
+                            <button class="btn btn-outline-danger btn-sm"><?= e(__('btn.delete')) ?></button>
                         </form>
                     </td>
                 </tr>

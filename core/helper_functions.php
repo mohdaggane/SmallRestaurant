@@ -13,11 +13,59 @@ function e(mixed $value): string
     return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/**
+ * Interface text for a key, from core/lang/en.php.
+ * Falls back to $fallback, then to the key itself if no match is found.
+ *
+ * @param string $key      e.g. 'nav.dashboard', 'btn.save'
+ * @param string $fallback Optional English fallback string
+ * @param array<string,scalar> $vars {placeholder} values, e.g. ['days' => 14]
+ */
+function __(string $key, string $fallback = '', array $vars = []): string
+{
+    global $LANG;
+    $text = (string)($LANG[$key] ?? ($fallback !== '' ? $fallback : $key));
+    if ($vars) {
+        $pairs = [];
+        foreach ($vars as $name => $value) {
+            $pairs['{' . $name . '}'] = (string)$value;
+        }
+        $text = strtr($text, $pairs);
+    }
+    return $text;
+}
+
+/** Echo a translated + HTML-escaped string. */
+function _e(string $key, string $fallback = '', array $vars = []): void
+{
+    echo e(__($key, $fallback, $vars));
+}
+
 /** Read a shop setting with a fallback. */
 function setting(string $key, string $default = ''): string
 {
     global $SETTINGS;
     return $SETTINGS[$key] ?? $default;
+}
+
+/** Read a platform-wide setting with a fallback. */
+function platform_setting(string $key, string $default = ''): string
+{
+    global $PLATFORM_SETTINGS;
+    return $PLATFORM_SETTINGS[$key] ?? $default;
+}
+
+/** Get the platform logo URL or empty string. */
+function platform_logo_url(): string
+{
+    $logo = platform_setting('logo_url', '');
+    if ($logo !== '') {
+        if (str_starts_with($logo, 'http://') || str_starts_with($logo, 'https://')) {
+            return $logo;
+        }
+        return url($logo);
+    }
+    return '';
 }
 
 /** Format an amount using the configured currency symbol. */
@@ -359,10 +407,10 @@ function price_order_lines(array $lines): array
             [$itemId, company_id()]
         );
         if (!$item) {
-            throw new OrderException('A menu item on this order no longer exists.', 422);
+            throw new OrderException(__('msg.item_gone'), 422);
         }
         if (!(int)$item['is_available']) {
-            throw new OrderException($item['name'] . ' is marked unavailable.', 422);
+            throw new OrderException(__('msg.item_unavail', '', ['name' => $item['name']]), 422);
         }
 
         $priced[] = [
@@ -378,7 +426,7 @@ function price_order_lines(array $lines): array
     }
 
     if (!$priced) {
-        throw new OrderException('The order has no valid items.', 422);
+        throw new OrderException(__('msg.no_valid'), 422);
     }
     return $priced;
 }
@@ -484,7 +532,7 @@ function reprice_open_orders(): int
 function mark_order_paid(int $orderId, float $total, float $paid, string $method, int $shiftId): float
 {
     if ($paid + 0.001 < $total) {
-        throw new OrderException('Amount paid is less than the total (' . money($total) . ').', 422);
+        throw new OrderException(__('msg.underpaid', '', ['total' => money($total)]), 422);
     }
     $change = round($paid - $total, 2);
 
@@ -496,7 +544,7 @@ function mark_order_paid(int $orderId, float $total, float $paid, string $method
         [$paid, $change, $method, user_id(), $shiftId, date('Y-m-d H:i:s'), $orderId, company_id()]
     );
     if ($stmt->affected_rows !== 1) {
-        throw new OrderException('This order was already paid or voided by someone else.', 409);
+        throw new OrderException(__('msg.race'), 409);
     }
     return $change;
 }
@@ -684,11 +732,11 @@ function duration_label(int $minutes): string
 {
     $minutes = max(0, $minutes);
     if ($minutes < 60) {
-        return $minutes . ' min';
+        return __('dur.min', '{n} min', ['n' => $minutes]);
     }
     if ($minutes < 1440) {
-        return intdiv($minutes, 60) . ' h ' . ($minutes % 60) . ' m';
+        return __('dur.hm', '{h} h {m} m', ['h' => intdiv($minutes, 60), 'm' => $minutes % 60]);
     }
     $days = intdiv($minutes, 1440);
-    return $days . ' day' . ($days === 1 ? '' : 's');
+    return __($days === 1 ? 'dur.day' : 'dur.days', $days === 1 ? '{n} day' : '{n} days', ['n' => $days]);
 }

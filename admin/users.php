@@ -5,10 +5,10 @@ require_once __DIR__ . '/../core/config.php';
 require_role('admin');
 
 $ROLES = [
-    'admin'   => 'Administrator — everything',
-    'cashier' => 'Cashier — POS, payments, drawer, expenses',
-    'waiter'  => 'Waiter — takes orders, cannot take payment',
-    'kitchen' => 'Kitchen — preparation screen only',
+    'admin'   => __('us.role_admin'),
+    'cashier' => __('us.role_cashier'),
+    'waiter'  => __('us.role_waiter'),
+    'kitchen' => __('us.role_kitchen'),
 ];
 
 $editing = null;
@@ -33,21 +33,20 @@ if (is_post()) {
         $addsSeat = $active === 1 && ($id === 0 || ($existing && !(int)$existing['is_active']));
 
         if ($id > 0 && !$existing) {
-            flash('That account no longer exists.', 'danger');
+            flash(__('us.err_gone'), 'danger');
         } elseif ($fullName === '' || $username === '') {
-            flash('Name and username are both required.', 'danger');
+            flash(__('us.err_required'), 'danger');
         } elseif ($clash) {
             $suffix = current_company()['slug'] ?? '';
-            flash('That username is already taken (usernames are shared by every restaurant on the system). Try e.g. "'
-                . $username . '.' . $suffix . '".', 'danger');
+            flash(__('us.err_taken', '', ['suggest' => $username . '.' . $suffix]), 'danger');
         } elseif ($addsSeat && company_limit_reached('users')) {
-            flash('Your plan allows ' . (int)current_company()['max_users'] . ' active accounts. Disable one or upgrade the plan (Billing).', 'danger');
+            flash(__('us.err_limit', '', ['n' => (int)current_company()['max_users']]), 'danger');
         } elseif ($id === 0 && strlen($password) < 6) {
-            flash('Set a password of at least 6 characters.', 'danger');
+            flash(__('us.err_pw_new'), 'danger');
         } elseif ($id > 0 && $password !== '' && strlen($password) < 6) {
-            flash('The new password must be at least 6 characters.', 'danger');
+            flash(__('pc.err_pw'), 'danger');
         } elseif ($id === user_id() && ($role !== 'admin' || $active === 0)) {
-            flash('You cannot remove your own admin access or disable your own account.', 'danger');
+            flash(__('us.err_self'), 'danger');
         } else {
             if ($id > 0) {
                 db_exec('UPDATE users SET full_name = ?, username = ?, role = ?, is_active = ? WHERE id = ? AND company_id = ?',
@@ -56,11 +55,11 @@ if (is_post()) {
                     db_exec('UPDATE users SET password_hash = ? WHERE id = ? AND company_id = ?',
                         [password_hash($password, PASSWORD_DEFAULT), $id, company_id()]);
                 }
-                flash('Account updated.');
+                flash(__('us.updated'));
             } else {
                 db_exec('INSERT INTO users (company_id, full_name, username, password_hash, role, is_active) VALUES (?,?,?,?,?,?)',
                     [company_id(), $fullName, $username, password_hash($password, PASSWORD_DEFAULT), $role, $active]);
-                flash('Account created.');
+                flash(__('us.created'));
             }
             redirect('admin/users.php');
         }
@@ -70,14 +69,14 @@ if (is_post()) {
         $id = (int)post('id');
         $target = db_one('SELECT is_active FROM users WHERE id = ? AND company_id = ?', [$id, company_id()]);
         if ($id === user_id()) {
-            flash('You cannot disable your own account.', 'danger');
+            flash(__('us.err_self_off'), 'danger');
         } elseif (!$target) {
-            flash('That account no longer exists.', 'danger');
+            flash(__('us.err_gone'), 'danger');
         } elseif (!(int)$target['is_active'] && company_limit_reached('users')) {
-            flash('Your plan allows ' . (int)current_company()['max_users'] . ' active accounts. Disable one or upgrade the plan (Billing).', 'danger');
+            flash(__('us.err_limit', '', ['n' => (int)current_company()['max_users']]), 'danger');
         } else {
             db_exec('UPDATE users SET is_active = 1 - is_active WHERE id = ? AND company_id = ?', [$id, company_id()]);
-            flash('Account status changed.');
+            flash(__('us.toggled'));
         }
         redirect('admin/users.php');
     }
@@ -93,13 +92,13 @@ $users = db_all(
     [company_id()]
 );
 
-$pageTitle = 'Users';
+$pageTitle = __('nav.users');
 require __DIR__ . '/../core/header.php';
 ?>
 
 <div class="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-4">
     <div class="card">
-        <div class="card-header"><?= $editing ? 'Edit account' : 'New account' ?></div>
+        <div class="card-header"><?= e($editing ? __('us.edit') : __('us.new')) ?></div>
         <div class="card-body">
             <form method="post" autocomplete="off" class="space-y-3">
                 <?= csrf_field() ?>
@@ -107,17 +106,17 @@ require __DIR__ . '/../core/header.php';
                 <input type="hidden" name="id" value="<?= (int)($editing['id'] ?? 0) ?>">
 
                 <div>
-                    <label class="label">Full name</label>
+                    <label class="label"><?= e(__('us.full_name')) ?></label>
                     <input type="text" name="full_name" class="input" required maxlength="100"
                            value="<?= e($editing['full_name'] ?? '') ?>">
                 </div>
                 <div>
-                    <label class="label">Username</label>
+                    <label class="label"><?= e(__('auth.username')) ?></label>
                     <input type="text" name="username" class="input" required maxlength="50"
                            value="<?= e($editing['username'] ?? '') ?>">
                 </div>
                 <div>
-                    <label class="label">Role</label>
+                    <label class="label"><?= e(__('lbl.role')) ?></label>
                     <select name="role" class="select">
                         <?php foreach ($ROLES as $key => $label): ?>
                             <option value="<?= $key ?>" <?= ($editing['role'] ?? '') === $key ? 'selected' : '' ?>>
@@ -127,23 +126,23 @@ require __DIR__ . '/../core/header.php';
                     </select>
                 </div>
                 <div>
-                    <label class="label">Password</label>
+                    <label class="label"><?= e(__('auth.password')) ?></label>
                     <input type="password" name="password" class="input"
                            <?= $editing ? '' : 'required' ?> minlength="6">
                     <?php if ($editing): ?>
-                        <p class="form-text">Leave blank to keep the current password.</p>
+                        <p class="form-text"><?= e(__('us.keep_pw')) ?></p>
                     <?php endif; ?>
                 </div>
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" name="is_active" class="checkbox"
                            <?= (!$editing || (int)$editing['is_active'] === 1) ? 'checked' : '' ?>>
-                    <span class="text-sm">Account can sign in</span>
+                    <span class="text-sm"><?= e(__('us.can_sign_in')) ?></span>
                 </label>
 
                 <div class="flex gap-2 pt-1">
-                    <button class="btn btn-brand"><?= $editing ? 'Save changes' : 'Create account' ?></button>
+                    <button class="btn btn-brand"><?= e($editing ? __('btn.save_changes') : __('us.create')) ?></button>
                     <?php if ($editing): ?>
-                        <a class="btn btn-outline" href="<?= url('admin/users.php') ?>">Cancel</a>
+                        <a class="btn btn-outline" href="<?= url('admin/users.php') ?>"><?= e(__('btn.cancel')) ?></a>
                     <?php endif; ?>
                 </div>
             </form>
@@ -154,31 +153,31 @@ require __DIR__ . '/../core/header.php';
         <div class="card overflow-x-auto">
         <table class="tbl">
             <thead><tr>
-                <th>Name</th><th>Username</th><th>Role</th>
-                <th class="text-center">Orders</th><th class="text-center">Status</th><th class="text-right">Actions</th>
+                <th><?= e(__('lbl.name')) ?></th><th><?= e(__('auth.username')) ?></th><th><?= e(__('lbl.role')) ?></th>
+                <th class="text-center"><?= e(__('lbl.orders')) ?></th><th class="text-center"><?= e(__('lbl.status')) ?></th><th class="text-right"><?= e(__('lbl.actions')) ?></th>
             </tr></thead>
             <tbody>
             <?php foreach ($users as $u): ?>
                 <tr>
-                    <td><?= e($u['full_name']) ?><?= (int)$u['id'] === user_id() ? ' <span class="badge badge-secondary">you</span>' : '' ?></td>
+                    <td><?= e($u['full_name']) ?><?= (int)$u['id'] === user_id() ? ' <span class="badge badge-secondary">' . e(__('us.you')) . '</span>' : '' ?></td>
                     <td class="text-muted"><?= e($u['username']) ?></td>
-                    <td><span class="badge badge-dark"><?= e(ucfirst($u['role'])) ?></span></td>
+                    <td><span class="badge badge-dark"><?= e(__('role.' . $u['role'], ucfirst($u['role']))) ?></span></td>
                     <td class="text-center"><?= (int)$u['order_count'] ?></td>
                     <td class="text-center">
                         <span class="badge <?= (int)$u['is_active'] ? 'badge-success' : 'badge-secondary' ?>">
-                            <?= (int)$u['is_active'] ? 'Active' : 'Disabled' ?>
+                            <?= e((int)$u['is_active'] ? __('st.active') : __('st.disabled')) ?>
                         </span>
                     </td>
                     <td class="text-right text-nowrap">
                         <a class="btn btn-outline btn-sm"
-                           href="<?= url('admin/users.php?edit=' . (int)$u['id']) ?>">Edit</a>
+                           href="<?= url('admin/users.php?edit=' . (int)$u['id']) ?>"><?= e(__('btn.edit')) ?></a>
                         <?php if ((int)$u['id'] !== user_id()): ?>
                             <form method="post" class="inline">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="toggle">
                                 <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
                                 <button class="btn btn-outline-warning btn-sm">
-                                    <?= (int)$u['is_active'] ? 'Disable' : 'Enable' ?>
+                                    <?= e((int)$u['is_active'] ? __('btn.disable') : __('btn.enable')) ?>
                                 </button>
                             </form>
                         <?php endif; ?>
@@ -189,7 +188,7 @@ require __DIR__ . '/../core/header.php';
         </table>
         </div>
         <p class="text-muted text-xs mt-2">
-            Accounts are never deleted — disabling one keeps its sales history intact.
+            <?= e(__('us.never_deleted')) ?>
         </p>
     </div>
 </div>

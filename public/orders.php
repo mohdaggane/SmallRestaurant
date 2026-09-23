@@ -28,22 +28,22 @@ if ($orders) {
     }
 }
 
-$pageTitle = 'Open Orders';
+$pageTitle = __('orders.title', 'Open Orders');
 $layout    = 'app';
 require __DIR__ . '/../core/header.php';
 ?>
 
 <?php if ($canCharge && !$shift): ?>
     <div class="flash-warning flex justify-between items-center">
-        <span>Your cash drawer is closed — open a shift to take payments.</span>
-        <a class="btn btn-dark btn-sm ml-3" href="<?= url('admin/shifts.php') ?>">Open shift</a>
+        <span><?= e(__('orders.no_drawer', 'Your cash drawer is closed — open a shift to take payments.')) ?></span>
+        <a class="btn btn-dark btn-sm ml-3" href="<?= url('admin/shifts.php') ?>"><?= e(__('orders.open_shift', 'Open shift')) ?></a>
     </div>
 <?php endif; ?>
 
 <?php if (!$orders): ?>
     <div class="card"><div class="card-body text-center text-muted py-12">
-        No unpaid orders right now.
-        <div class="mt-4"><a class="btn btn-accent" href="<?= url('public/pos.php') ?>">Go to the POS terminal</a></div>
+        <?= e(__('orders.no_orders', 'No unpaid orders right now.')) ?>
+        <div class="mt-4"><a class="btn btn-accent" href="<?= url('public/pos.php') ?>"><?= e(__('orders.go_to_pos', 'Go to the POS terminal')) ?></a></div>
     </div></div>
 <?php endif; ?>
 
@@ -54,20 +54,20 @@ require __DIR__ . '/../core/header.php';
             <div class="card-header flex justify-between items-center">
                 <span class="font-bold">#<?= e($o['order_no']) ?></span>
                 <span class="badge <?= $o['order_type'] === 'takeaway' ? 'badge-info' : 'badge-secondary' ?>">
-                    <?= $o['order_type'] === 'takeaway' ? 'Takeaway' : 'Dine in' ?><?= $o['table_label'] ? ' · ' . e($o['table_label']) : '' ?>
+                    <?= e($o['order_type'] === 'takeaway' ? __('orders.takeaway') : __('orders.dine_in')) ?><?= $o['table_label'] ? ' · ' . e($o['table_label']) : '' ?>
                 </span>
             </div>
             <div class="card-body flex-1 py-2">
                 <p class="text-muted text-xs mb-2">
-                    <?= dt($o['created_at'], 'g:i A') ?> · taken by <?= e($o['taken_by']) ?>
-                    <?php if ($o['updated_at']): ?> · last added <?= dt($o['updated_at'], 'g:i A') ?><?php endif; ?>
+                    <?= dt($o['created_at'], 'g:i A') ?> · <?= e(__('orders.taken_by', 'taken by')) ?> <?= e($o['taken_by']) ?>
+                    <?php if ($o['updated_at']): ?> · <?= e(__('orders.last_added', 'last added')) ?> <?= dt($o['updated_at'], 'g:i A') ?><?php endif; ?>
                 </p>
                 <table class="tbl mb-2">
                     <?php foreach ($lines as $li): ?>
                         <tr>
                             <td><?= (int)$li['qty'] ?>&times; <?= e($li['item_name']) ?>
                                 <?php if ((int)$li['round'] > 1): ?>
-                                    <span class="badge badge-accent">Round <?= (int)$li['round'] ?></span>
+                                    <span class="badge badge-accent"><?= e(__('lbl.round')) ?> <?= (int)$li['round'] ?></span>
                                 <?php endif; ?>
                                 <?php if ($li['kitchen_status'] !== 'served'): ?>
                                     <span class="badge badge-secondary"><?= e($li['kitchen_status']) ?></span>
@@ -79,12 +79,12 @@ require __DIR__ . '/../core/header.php';
                 </table>
                 <?php if ((float)$o['tax'] > 0): ?>
                     <div class="flex justify-between text-xs text-muted">
-                        <span>Before VAT <?= money((float)$o['subtotal'] - (float)$o['discount']) ?></span>
+                        <span><?= e(__('lbl.before_vat')) ?> <?= money((float)$o['subtotal'] - (float)$o['discount']) ?></span>
                         <span>VAT <?= e(vat_label($o['vat_rate'])) ?> <?= money($o['tax']) ?></span>
                     </div>
                 <?php endif; ?>
                 <div class="flex justify-between font-bold mt-1">
-                    <span>Total<?= (float)$o['tax'] > 0 ? ' incl. VAT' : '' ?></span><span><?= money($o['total']) ?></span>
+                    <span><?= e(__('lbl.total', 'Total')) ?><?= (float)$o['tax'] > 0 ? ' ' . e(__('orders.total_vat', 'incl. VAT')) : '' ?></span><span><?= money($o['total']) ?></span>
                 </div>
             </div>
             <div class="card-footer flex gap-2 flex-wrap">
@@ -93,18 +93,18 @@ require __DIR__ . '/../core/header.php';
                             data-order="<?= (int)$o['id'] ?>"
                             data-no="<?= e($o['order_no']) ?>"
                             data-total="<?= e($o['total']) ?>"
-                            <?= $shift ? '' : 'disabled' ?>>Take payment</button>
+                            <?= $shift ? '' : 'disabled' ?>><?= e(__('orders.take_payment', 'Take payment')) ?></button>
                 <?php endif; ?>
                 <a class="btn btn-accent btn-sm"
-                   href="<?= url('public/pos.php?order=' . (int)$o['id']) ?>">Add items</a>
+                   href="<?= url('public/pos.php?order=' . (int)$o['id']) ?>"><?= e(__('orders.add_items', 'Add items')) ?></a>
                 <a class="btn btn-outline btn-sm" target="_blank"
-                   href="<?= url('public/receipt.php?id=' . (int)$o['id']) ?>">Bill</a>
+                   href="<?= url('public/receipt.php?id=' . (int)$o['id']) ?>"><?= e(__('orders.bill', 'Bill')) ?></a>
                 <?php if (has_role('admin')): ?>
                     <form method="post" action="<?= url('public/order_void.php') ?>"
-                          onsubmit="return confirm('Void this order? It cannot be undone.');">
+                          onsubmit="return confirm('<?= e(__('orders.void_confirm', 'Void this order? It cannot be undone.')) ?>')">
                         <?= csrf_field() ?>
                         <input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>">
-                        <button class="btn btn-outline-danger btn-sm">Void</button>
+                        <button class="btn btn-outline-danger btn-sm"><?= e(__('orders.void', 'Void')) ?></button>
                     </form>
                 <?php endif; ?>
             </div>
@@ -121,31 +121,31 @@ require __DIR__ . '/../core/header.php';
       <?= csrf_field() ?>
       <input type="hidden" name="order_id" id="payOrderId">
       <div class="modal-header">
-        <h5 class="font-semibold">Take payment · <span id="payOrderNo"></span></h5>
+        <h5 class="font-semibold"><?= e(__('orders.take_payment', 'Take payment')) ?> · <span id="payOrderNo"></span></h5>
         <button type="button" class="text-muted hover:text-ink text-xl leading-none" id="payModalClose">&times;</button>
       </div>
       <div class="modal-body space-y-3">
         <div class="flex justify-between text-xl">
-            <strong>Total due</strong><strong id="payTotalText"></strong>
+            <strong><?= e(__('orders.total_due', 'Total due')) ?></strong><strong id="payTotalText"></strong>
         </div>
         <div>
-            <label class="label">Payment method</label>
+            <label class="label"><?= e(__('orders.pay_method', 'Payment method')) ?></label>
             <select name="payment_method" class="select">
-                <option value="cash">Cash</option>
-                <option value="mobile">Mobile money</option>
-                <option value="card">Card</option>
+                <option value="cash"><?= e(__('orders.cash', 'Cash')) ?></option>
+                <option value="mobile"><?= e(__('orders.mobile_money', 'Mobile money')) ?></option>
+                <option value="card"><?= e(__('orders.card', 'Card')) ?></option>
             </select>
         </div>
         <div>
-            <label class="label">Amount received</label>
+            <label class="label"><?= e(__('orders.amount_received', 'Amount received')) ?></label>
             <input type="number" name="paid_amount" id="payPaid" class="input input-lg text-right"
                    step="0.01" min="0" required>
         </div>
-        <div class="flex justify-between"><span>Change</span><strong id="payChange">—</strong></div>
+        <div class="flex justify-between"><span><?= e(__('lbl.change', 'Change')) ?></span><strong id="payChange">—</strong></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline" id="payModalCancelBtn">Cancel</button>
-        <button class="btn btn-ok">Confirm payment</button>
+        <button type="button" class="btn btn-outline" id="payModalCancelBtn"><?= e(__('btn.cancel', 'Cancel')) ?></button>
+        <button class="btn btn-ok"><?= e(__('orders.confirm_payment', 'Confirm payment')) ?></button>
       </div>
     </form>
   </div>

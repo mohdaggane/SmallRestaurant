@@ -18,38 +18,32 @@ $register      = url('public/register.php');
 $login         = url('public/login.php');
 $platformLogin = url('platform/login.php');
 
+$companyName  = platform_setting('company_name', 'SAHAN ICT');
+$systemName   = platform_setting('system_name', 'Restaurant POS');
+$contactPhone = platform_setting('contact_phone', '+252 61 5000000');
+$contactEmail = platform_setting('contact_email', 'info@sahanict.org');
+$webName      = platform_setting('web_name', 'sahanict.org');
+$webUrl       = platform_setting('web_url', 'https://sahanict.org');
+$logoUrl      = platform_logo_url();
+
 /** "$10" or "$12.50" — whole prices without the cents. */
 function plan_price(float $p): string
 {
     return '$' . (fmod($p, 1.0) == 0.0 ? number_format($p, 0) : number_format($p, 2));
 }
 
-$faqs = [
-    [
-        'Do I need to buy special equipment?',
-        'No. It works in the web browser on any tablet, phone, laptop, or computer you already have. You can connect standard receipt printers anytime.'
-    ],
-    [
-        'Can customers pay with mobile money?',
-        'Yes. Every bill automatically prints your merchant payment code and exact total, so customers can pay by phone in seconds.'
-    ],
-    [
-        'How do my employees sign in?',
-        'You create simple accounts for each staff member with their specific role (Admin, Cashier, Waiter, or Kitchen). They only see what they need for their job.'
-    ],
-    [
-        'What happens after the 14-day free trial?',
-        'You can choose a simple monthly plan to keep going. All your menu items, orders, and sales history stay right where they are.'
-    ]
-];
+$faqs = [];
+foreach ([1, 2, 3, 4] as $i) {
+    $faqs[] = [__("home.faq{$i}_q"), __("home.faq{$i}_a")];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Restaurant POS by SAHAN ICT — Easy Point of Sale & Kitchen System</title>
-    <meta name="description" content="Simple, fast restaurant POS software by SAHAN ICT. Take orders, send tickets to the kitchen, accept mobile money and track daily cash sales.">
+    <title><?= e(__('home.meta_title', '', ['system' => $systemName, 'company' => $companyName])) ?></title>
+    <meta name="description" content="<?= e(__('home.meta_desc', '', ['company' => $companyName])) ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
@@ -100,33 +94,37 @@ $faqs = [
         
         <!-- Logo -->
         <a href="<?= url('') ?>" class="flex items-center gap-2.5 no-underline group">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow text-white" style="background: linear-gradient(135deg, var(--sn), var(--sb));">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M17 6s-2-2-5-2-5 1.8-5 4c0 2.5 2.5 3.5 5 4.5s5 2 5 4.5c0 2.2-2 3-5 3s-5-2-5-2"
-                          stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
-                </svg>
-            </div>
+            <?php if ($logoUrl !== ''): ?>
+                <img src="<?= e($logoUrl) ?>" alt="Logo" class="w-9 h-9 rounded-xl object-contain shadow-sm bg-white p-0.5 border border-slate-200">
+            <?php else: ?>
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow text-white" style="background: linear-gradient(135deg, var(--sn), var(--sb));">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M17 6s-2-2-5-2-5 1.8-5 4c0 2.5 2.5 3.5 5 4.5s5 2 5 4.5c0 2.2-2 3-5 3s-5-2-5-2"
+                              stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            <?php endif; ?>
             <div>
-                <div class="font-extrabold text-[15px] tracking-tight leading-none" style="color:var(--sn);">SAHAN ICT</div>
-                <div class="text-[9px] font-bold tracking-widest uppercase mt-0.5" style="color:var(--sb);">Restaurant POS</div>
+                <div class="font-extrabold text-[15px] tracking-tight leading-none" style="color:var(--sn);"><?= e($companyName) ?></div>
+                <div class="text-[9px] font-bold tracking-widest uppercase mt-0.5" style="color:var(--sb);"><?= e($systemName) ?></div>
             </div>
         </a>
 
         <!-- Links -->
         <div class="hidden md:flex items-center gap-7 text-sm font-semibold text-slate-600">
-            <a href="#features" class="hover:text-blue-600 transition-colors">Features</a>
-            <a href="#how" class="hover:text-blue-600 transition-colors">How It Works</a>
-            <a href="#pricing" class="hover:text-blue-600 transition-colors">Pricing</a>
-            <a href="#faq" class="hover:text-blue-600 transition-colors">FAQ</a>
+            <a href="#features" class="hover:text-blue-600 transition-colors"><?= e(__('home.nav_features')) ?></a>
+            <a href="#how" class="hover:text-blue-600 transition-colors"><?= e(__('home.nav_how')) ?></a>
+            <a href="#pricing" class="hover:text-blue-600 transition-colors"><?= e(__('home.nav_pricing')) ?></a>
+            <a href="#faq" class="hover:text-blue-600 transition-colors"><?= e(__('home.nav_faq')) ?></a>
         </div>
 
         <!-- Action Buttons -->
         <div class="hidden sm:flex items-center gap-3">
             <a href="<?= $login ?>" class="text-sm font-semibold px-3 py-2 text-slate-700 hover:text-blue-700 no-underline transition-colors">
-                Sign In
+                <?= e(__('home.sign_in')) ?>
             </a>
             <a href="<?= $register ?>" class="btn-brand-primary text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl no-underline inline-flex items-center gap-1.5">
-                <span>Start Free Trial</span>
+                <span><?= e(__('home.start_trial')) ?></span>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                     <polyline points="12 5 19 12 12 19"></polyline>
@@ -146,13 +144,13 @@ $faqs = [
 
     <!-- Mobile Dropdown -->
     <div id="mobileMenu" class="hidden sm:hidden border-t border-slate-200 bg-white px-5 py-4 space-y-3 text-sm font-medium">
-        <a href="#features" class="block py-1 text-slate-700">Features</a>
-        <a href="#how" class="block py-1 text-slate-700">How It Works</a>
-        <a href="#pricing" class="block py-1 text-slate-700">Pricing</a>
-        <a href="#faq" class="block py-1 text-slate-700">FAQ</a>
+        <a href="#features" class="block py-1 text-slate-700"><?= e(__('home.nav_features')) ?></a>
+        <a href="#how" class="block py-1 text-slate-700"><?= e(__('home.nav_how')) ?></a>
+        <a href="#pricing" class="block py-1 text-slate-700"><?= e(__('home.nav_pricing')) ?></a>
+        <a href="#faq" class="block py-1 text-slate-700"><?= e(__('home.nav_faq')) ?></a>
         <div class="pt-3 border-t border-slate-100 flex gap-2">
-            <a href="<?= $login ?>" class="flex-1 text-center py-2 text-xs font-bold border border-slate-200 rounded-lg text-slate-700 no-underline">Sign In</a>
-            <a href="<?= $register ?>" class="flex-1 text-center py-2 text-xs font-bold btn-brand-primary rounded-lg no-underline text-white">Free Trial</a>
+            <a href="<?= $login ?>" class="flex-1 text-center py-2 text-xs font-bold border border-slate-200 rounded-lg text-slate-700 no-underline"><?= e(__('home.sign_in')) ?></a>
+            <a href="<?= $register ?>" class="flex-1 text-center py-2 text-xs font-bold btn-brand-primary rounded-lg no-underline text-white"><?= e(__('home.free_trial')) ?></a>
         </div>
     </div>
 </header>
@@ -168,36 +166,36 @@ $faqs = [
                 
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-blue-200 text-xs font-semibold text-blue-700 mb-5 shadow-sm">
                     <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <span>Free <?= TRIAL_DAYS ?>-Day Trial &middot; No Credit Card Needed</span>
+                    <span><?= e(__('home.trial_badge', '', ['days' => TRIAL_DAYS])) ?></span>
                 </div>
 
                 <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
-                    The easy POS system for restaurants &amp; cafes.
+                    <?= e(__('home.hero_title')) ?>
                 </h1>
 
                 <p class="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto lg:mx-0 mb-7">
-                    Take customer orders quickly, send tickets straight to the kitchen screen, accept cash or mobile money, and balance your daily cash drawer with zero stress.
+                    <?= e(__('home.hero_sub')) ?>
                 </p>
 
                 <!-- Action Buttons -->
                 <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 max-w-md mx-auto lg:mx-0">
                     <a href="<?= $register ?>" class="btn-brand-primary w-full sm:w-auto px-6 py-3.5 rounded-xl font-bold text-sm text-center no-underline inline-flex items-center justify-center gap-2">
-                        <span>Start Free <?= TRIAL_DAYS ?>-Day Trial</span>
+                        <span><?= e(__('home.start_trial_days', '', ['days' => TRIAL_DAYS])) ?></span>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                             <polyline points="12 5 19 12 12 19"></polyline>
                         </svg>
                     </a>
                     <a href="<?= $login ?>" class="btn-brand-outline w-full sm:w-auto px-6 py-3.5 rounded-xl font-semibold text-sm text-center no-underline">
-                        Sign In to Station
+                        <?= e(__('home.sign_in_station')) ?>
                     </a>
                 </div>
 
                 <!-- Trust Points -->
                 <div class="mt-8 pt-6 border-t border-slate-200/80 flex flex-wrap items-center justify-center lg:justify-start gap-y-2 gap-x-6 text-xs font-semibold text-slate-600">
-                    <span class="flex items-center gap-1.5"><span class="text-emerald-600 text-sm">✓</span> Works on tablets &amp; laptops</span>
-                    <span class="flex items-center gap-1.5"><span class="text-emerald-600 text-sm">✓</span> Fast receipt printing</span>
-                    <span class="flex items-center gap-1.5"><span class="text-emerald-600 text-sm">✓</span> 100% private data</span>
+                    <span class="flex items-center gap-1.5"><span class="text-emerald-600 text-sm">✓</span> <?= e(__('home.trust_devices')) ?></span>
+                    <span class="flex items-center gap-1.5"><span class="text-emerald-600 text-sm">✓</span> <?= e(__('home.trust_print')) ?></span>
+                    <span class="flex items-center gap-1.5"><span class="text-emerald-600 text-sm">✓</span> <?= e(__('home.trust_private')) ?></span>
                 </div>
 
             </div>
@@ -211,12 +209,12 @@ $faqs = [
                         <div class="flex items-center gap-2">
                             <span class="text-xl">🍽️</span>
                             <div>
-                                <div class="font-bold text-sm text-slate-900">Table 05 &middot; Lunch</div>
-                                <div class="text-[11px] text-slate-400">Cashier: Ahmed &middot; Live</div>
+                                <div class="font-bold text-sm text-slate-900"><?= e(__('home.mock_table')) ?></div>
+                                <div class="text-[11px] text-slate-400"><?= e(__('home.mock_cashier')) ?></div>
                             </div>
                         </div>
                         <span class="px-2.5 py-1 rounded-full text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-100">
-                            Sent to Kitchen
+                            <?= e(__('home.mock_sent')) ?>
                         </span>
                     </div>
 
@@ -225,21 +223,21 @@ $faqs = [
                         <div class="flex justify-between items-center">
                             <div class="flex items-center gap-2">
                                 <span class="w-5 h-5 rounded bg-blue-50 text-blue-700 font-bold flex items-center justify-center text-xs">2</span>
-                                <span class="font-medium text-slate-800">Spiced Milk Tea</span>
+                                <span class="font-medium text-slate-800"><?= e(__('home.mock_item1')) ?></span>
                             </div>
                             <span class="font-semibold text-slate-900">$1.50</span>
                         </div>
                         <div class="flex justify-between items-center">
                             <div class="flex items-center gap-2">
                                 <span class="w-5 h-5 rounded bg-blue-50 text-blue-700 font-bold flex items-center justify-center text-xs">1</span>
-                                <span class="font-medium text-slate-800">Chicken Steak &amp; Rice</span>
+                                <span class="font-medium text-slate-800"><?= e(__('home.mock_item2')) ?></span>
                             </div>
                             <span class="font-semibold text-slate-900">$5.00</span>
                         </div>
                         <div class="flex justify-between items-center">
                             <div class="flex items-center gap-2">
                                 <span class="w-5 h-5 rounded bg-blue-50 text-blue-700 font-bold flex items-center justify-center text-xs">1</span>
-                                <span class="font-medium text-slate-800">Fresh Mango Juice</span>
+                                <span class="font-medium text-slate-800"><?= e(__('home.mock_item3')) ?></span>
                             </div>
                             <span class="font-semibold text-slate-900">$1.50</span>
                         </div>
@@ -248,15 +246,15 @@ $faqs = [
                     <!-- Totals and Payment Details -->
                     <div class="pt-3 border-t border-slate-100 space-y-1.5 text-xs">
                         <div class="flex justify-between text-slate-500">
-                            <span>Subtotal</span>
+                            <span><?= e(__('lbl.subtotal')) ?></span>
                             <span>$8.00</span>
                         </div>
                         <div class="flex justify-between text-slate-500">
-                            <span>Payment Option</span>
-                            <span class="text-blue-700 font-semibold">Cash &middot; Mobile Money Dial</span>
+                            <span><?= e(__('home.mock_payment')) ?></span>
+                            <span class="text-blue-700 font-semibold"><?= e(__('home.mock_payment_val')) ?></span>
                         </div>
                         <div class="flex justify-between text-sm font-bold text-slate-900 pt-1 border-t border-dashed border-slate-200">
-                            <span>Total Due</span>
+                            <span><?= e(__('home.mock_total_due')) ?></span>
                             <span class="text-base text-blue-700 font-extrabold">$8.00</span>
                         </div>
                     </div>
@@ -264,7 +262,7 @@ $faqs = [
                     <!-- Button Demo -->
                     <div class="mt-4 pt-2">
                         <div class="w-full py-2.5 rounded-xl text-center text-xs font-bold text-white bg-gradient-to-r from-blue-700 to-blue-600 shadow">
-                            ✓ Complete Order &amp; Print Receipt
+                            <?= e(__('home.mock_complete')) ?>
                         </div>
                     </div>
 
@@ -280,11 +278,11 @@ $faqs = [
 <section class="py-6 bg-slate-50 border-b border-slate-200">
     <div class="max-w-6xl mx-auto px-4 sm:px-6">
         <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm font-semibold text-slate-600">
-            <span class="text-slate-400 uppercase tracking-wider text-xs">Perfect for:</span>
-            <span class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-slate-800">☕ Cafes &amp; Tea Shops</span>
-            <span class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-slate-800">🍛 Restaurants &amp; Grills</span>
-            <span class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-slate-800">🍔 Fast Food &amp; Takeout</span>
-            <span class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-slate-800">🥤 Juice Bars &amp; Bakeries</span>
+            <span class="text-slate-400 uppercase tracking-wider text-xs"><?= e(__('home.perfect_for')) ?></span>
+            <span class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-slate-800"><?= e(__('home.type_cafe')) ?></span>
+            <span class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-slate-800"><?= e(__('home.type_rest')) ?></span>
+            <span class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-slate-800"><?= e(__('home.type_fast')) ?></span>
+            <span class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-slate-800"><?= e(__('home.type_juice')) ?></span>
         </div>
     </div>
 </section>
@@ -294,12 +292,12 @@ $faqs = [
     <div class="max-w-6xl mx-auto px-4 sm:px-6">
         
         <div class="text-center max-w-xl mx-auto mb-12">
-            <span class="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Simple Features</span>
+            <span class="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full"><?= e(__('home.feat_badge')) ?></span>
             <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2.5">
-                Everything you need to run your floor.
+                <?= e(__('home.feat_title')) ?>
             </h2>
             <p class="text-slate-500 text-sm mt-2">
-                No complex manuals or complicated setup. Designed so staff can learn it in 5 minutes.
+                <?= e(__('home.feat_sub')) ?>
             </p>
         </div>
 
@@ -310,9 +308,9 @@ $faqs = [
                 <div class="w-12 h-12 rounded-xl bg-blue-100/70 text-blue-700 flex items-center justify-center text-xl mb-4">
                     🧾
                 </div>
-                <h3 class="font-bold text-slate-900 text-base mb-1.5">Fast Counter POS</h3>
+                <h3 class="font-bold text-slate-900 text-base mb-1.5"><?= e(__('home.f1_title')) ?></h3>
                 <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                    Tap menu items, hold open tables, add extra rounds, and print customer bills in seconds.
+                    <?= e(__('home.f1_desc')) ?>
                 </p>
             </div>
 
@@ -321,9 +319,9 @@ $faqs = [
                 <div class="w-12 h-12 rounded-xl bg-blue-100/70 text-blue-700 flex items-center justify-center text-xl mb-4">
                     👨‍🍳
                 </div>
-                <h3 class="font-bold text-slate-900 text-base mb-1.5">Live Kitchen Screen</h3>
+                <h3 class="font-bold text-slate-900 text-base mb-1.5"><?= e(__('home.f2_title')) ?></h3>
                 <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                    Cooks see orders instantly as they are taken. Mark food preparing and served without lost paper tickets.
+                    <?= e(__('home.f2_desc')) ?>
                 </p>
             </div>
 
@@ -332,9 +330,9 @@ $faqs = [
                 <div class="w-12 h-12 rounded-xl bg-blue-100/70 text-blue-700 flex items-center justify-center text-xl mb-4">
                     💵
                 </div>
-                <h3 class="font-bold text-slate-900 text-base mb-1.5">Cash Drawer Balance</h3>
+                <h3 class="font-bold text-slate-900 text-base mb-1.5"><?= e(__('home.f3_title')) ?></h3>
                 <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                    Open shifts with an opening float, log cash expenses, and count your cash drawer down to the exact dollar.
+                    <?= e(__('home.f3_desc')) ?>
                 </p>
             </div>
 
@@ -343,9 +341,9 @@ $faqs = [
                 <div class="w-12 h-12 rounded-xl bg-blue-100/70 text-blue-700 flex items-center justify-center text-xl mb-4">
                     📱
                 </div>
-                <h3 class="font-bold text-slate-900 text-base mb-1.5">Mobile Money Ready</h3>
+                <h3 class="font-bold text-slate-900 text-base mb-1.5"><?= e(__('home.f4_title')) ?></h3>
                 <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                    Receipts automatically show your merchant phone dial code with the exact total for fast mobile customer payments.
+                    <?= e(__('home.f4_desc')) ?>
                 </p>
             </div>
 
@@ -359,9 +357,9 @@ $faqs = [
     <div class="max-w-6xl mx-auto px-4 sm:px-6">
         
         <div class="text-center max-w-xl mx-auto mb-12">
-            <span class="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Easy Setup</span>
+            <span class="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full"><?= e(__('home.how_badge')) ?></span>
             <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2.5">
-                Up and running in 3 simple steps.
+                <?= e(__('home.how_title')) ?>
             </h2>
         </div>
 
@@ -369,25 +367,25 @@ $faqs = [
             
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
                 <span class="w-8 h-8 rounded-lg bg-blue-700 text-white font-bold flex items-center justify-center text-sm mb-3">1</span>
-                <h3 class="font-bold text-slate-900 text-base mb-1">Create Your Restaurant</h3>
+                <h3 class="font-bold text-slate-900 text-base mb-1"><?= e(__('home.s1_title')) ?></h3>
                 <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                    Fill in your restaurant name and admin password. Your 14-day free trial opens instantly.
+                    <?= e(__('home.s1_desc')) ?>
                 </p>
             </div>
 
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
                 <span class="w-8 h-8 rounded-lg bg-blue-700 text-white font-bold flex items-center justify-center text-sm mb-3">2</span>
-                <h3 class="font-bold text-slate-900 text-base mb-1">Add Your Menu &amp; Staff</h3>
+                <h3 class="font-bold text-slate-900 text-base mb-1"><?= e(__('home.s2_title')) ?></h3>
                 <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                    Type in your food and drinks with prices. Add simple sign-ins for cashiers, waiters, and kitchen cooks.
+                    <?= e(__('home.s2_desc')) ?>
                 </p>
             </div>
 
             <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
                 <span class="w-8 h-8 rounded-lg bg-blue-700 text-white font-bold flex items-center justify-center text-sm mb-3">3</span>
-                <h3 class="font-bold text-slate-900 text-base mb-1">Start Taking Orders</h3>
+                <h3 class="font-bold text-slate-900 text-base mb-1"><?= e(__('home.s3_title')) ?></h3>
                 <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
-                    Open your shift, tap items for customer orders, print receipts, and watch your daily sales add up.
+                    <?= e(__('home.s3_desc')) ?>
                 </p>
             </div>
 
@@ -401,12 +399,12 @@ $faqs = [
     <div class="max-w-6xl mx-auto px-4 sm:px-6">
         
         <div class="text-center max-w-xl mx-auto mb-12">
-            <span class="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Plans &amp; Pricing</span>
+            <span class="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full"><?= e(__('home.price_badge')) ?></span>
             <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2.5">
-                Affordable plans for any restaurant size.
+                <?= e(__('home.price_title')) ?>
             </h2>
             <p class="text-slate-500 text-sm mt-2">
-                Start with a free <?= TRIAL_DAYS ?>-day trial. Pick a plan whenever you're ready.
+                <?= e(__('home.price_sub', '', ['days' => TRIAL_DAYS])) ?>
             </p>
         </div>
 
@@ -420,7 +418,7 @@ $faqs = [
                     <div>
                         <?php if ($isFeatured): ?>
                             <span class="inline-block text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-600 text-white mb-3">
-                                Most Popular
+                                <?= e(__('home.most_popular')) ?>
                             </span>
                         <?php endif; ?>
 
@@ -428,39 +426,39 @@ $faqs = [
 
                         <div class="my-4 flex items-baseline gap-1">
                             <span class="text-3xl sm:text-4xl font-extrabold text-slate-900">
-                                <?= $isFree ? 'Free' : plan_price((float)$p['price_month']) ?>
+                                <?= $isFree ? e(__('home.free')) : plan_price((float)$p['price_month']) ?>
                             </span>
                             <span class="text-xs text-slate-500">
-                                <?= $isFree ? 'for ' . TRIAL_DAYS . ' days' : '/ month' ?>
+                                <?= e($isFree ? __('home.for_days', '', ['days' => TRIAL_DAYS]) : __('home.per_month')) ?>
                             </span>
                         </div>
 
                         <ul class="space-y-2.5 text-xs sm:text-sm text-slate-700 mb-6">
                             <li class="flex items-center gap-2">
                                 <span class="text-emerald-600 font-bold">✓</span>
-                                <span><?= $p['max_users'] === null ? 'Unlimited staff accounts' : (int)$p['max_users'] . ' staff accounts' ?></span>
+                                <span><?= e($p['max_users'] === null ? __('home.unlimited_staff') : __('home.n_staff', '', ['n' => (int)$p['max_users']])) ?></span>
                             </li>
                             <li class="flex items-center gap-2">
                                 <span class="text-emerald-600 font-bold">✓</span>
-                                <span><?= $p['max_menu_items'] === null ? 'Unlimited menu items' : (int)$p['max_menu_items'] . ' menu items' ?></span>
+                                <span><?= e($p['max_menu_items'] === null ? __('home.unlimited_menu') : __('home.n_menu', '', ['n' => (int)$p['max_menu_items']])) ?></span>
                             </li>
                             <li class="flex items-center gap-2">
                                 <span class="text-emerald-600 font-bold">✓</span>
-                                <span>Fast Counter POS &amp; Kitchen Screen</span>
+                                <span><?= e(__('home.plan_feat1')) ?></span>
                             </li>
                             <li class="flex items-center gap-2">
                                 <span class="text-emerald-600 font-bold">✓</span>
-                                <span>Mobile money dial code printing</span>
+                                <span><?= e(__('home.plan_feat2')) ?></span>
                             </li>
                             <li class="flex items-center gap-2">
                                 <span class="text-emerald-600 font-bold">✓</span>
-                                <span>Shift cash tracking &amp; sales reports</span>
+                                <span><?= e(__('home.plan_feat3')) ?></span>
                             </li>
                         </ul>
                     </div>
 
                     <a href="<?= $register ?>" class="w-full text-center font-bold text-xs uppercase tracking-wider rounded-xl py-3.5 no-underline transition <?= $isFeatured ? 'btn-brand-primary' : 'btn-brand-outline' ?>">
-                        <?= $isFree ? 'Start Free Trial' : 'Choose Plan' ?>
+                        <?= e($isFree ? __('home.start_trial') : __('home.choose_plan')) ?>
                     </a>
                 </div>
             <?php endforeach; ?>
@@ -474,9 +472,9 @@ $faqs = [
     <div class="max-w-3xl mx-auto px-4 sm:px-6">
         
         <div class="text-center mb-10">
-            <span class="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Common Questions</span>
+            <span class="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full"><?= e(__('home.faq_badge')) ?></span>
             <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2.5">
-                Questions &amp; Answers
+                <?= e(__('home.faq_title')) ?>
             </h2>
         </div>
 
@@ -503,21 +501,21 @@ $faqs = [
 <section class="py-16 lg:py-20 bg-white">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
         <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-3">
-            Ready to speed up your restaurant?
+            <?= e(__('home.cta_title')) ?>
         </h2>
         <p class="text-slate-600 text-sm sm:text-base max-w-lg mx-auto mb-7">
-            Start taking orders today with your free <?= TRIAL_DAYS ?>-day trial. Setup takes less than 2 minutes.
+            <?= e(__('home.cta_sub', '', ['days' => TRIAL_DAYS])) ?>
         </p>
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
             <a href="<?= $register ?>" class="btn-brand-primary w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-sm no-underline inline-flex items-center justify-center gap-2">
-                <span>Start Free Trial</span>
+                <span><?= e(__('home.start_trial')) ?></span>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                     <polyline points="12 5 19 12 12 19"></polyline>
                 </svg>
             </a>
             <a href="<?= $login ?>" class="btn-brand-outline w-full sm:w-auto px-7 py-3.5 rounded-xl font-semibold text-sm no-underline">
-                Sign In to Restaurant
+                <?= e(__('home.sign_in_restaurant')) ?>
             </a>
         </div>
     </div>
@@ -528,30 +526,37 @@ $faqs = [
     <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
         
         <div class="flex items-center gap-2.5">
-            <div class="w-6 h-6 rounded-lg flex items-center justify-center text-white" style="background: linear-gradient(135deg, var(--sn), var(--sb));">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                    <path d="M17 6s-2-2-5-2-5 1.8-5 4c0 2.5 2.5 3.5 5 4.5s5 2 5 4.5c0 2.2-2 3-5 3s-5-2-5-2"
-                          stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
-                </svg>
-            </div>
-            <span class="font-bold text-slate-800">SAHAN ICT</span>
+            <?php if ($logoUrl !== ''): ?>
+                <img src="<?= e($logoUrl) ?>" alt="Logo" class="w-6 h-6 rounded-lg object-contain bg-white p-0.5 border border-slate-200">
+            <?php else: ?>
+                <div class="w-6 h-6 rounded-lg flex items-center justify-center text-white" style="background: linear-gradient(135deg, var(--sn), var(--sb));">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                        <path d="M17 6s-2-2-5-2-5 1.8-5 4c0 2.5 2.5 3.5 5 4.5s5 2 5 4.5c0 2.2-2 3-5 3s-5-2-5-2"
+                              stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+                    </svg>
+                </div>
+            <?php endif; ?>
+            <span class="font-bold text-slate-800"><?= e($companyName) ?></span>
             <span>&middot;</span>
-            <span>Restaurant POS</span>
+            <span><?= e($systemName) ?></span>
             <span>&middot;</span>
             <span>&copy; <?= date('Y') ?></span>
         </div>
 
         <div class="flex flex-wrap items-center justify-center sm:justify-end gap-x-5 gap-y-2 font-medium">
-            <a href="#features" class="hover:text-blue-700 transition">Features</a>
-            <a href="#how" class="hover:text-blue-700 transition">How It Works</a>
-            <a href="#pricing" class="hover:text-blue-700 transition">Pricing</a>
-            <a href="<?= $login ?>" class="hover:text-blue-700 transition">Sign In</a>
-            <a href="<?= $register ?>" class="hover:text-blue-700 transition">Register</a>
-            <a href="<?= $platformLogin ?>" class="text-slate-700 hover:text-blue-700 font-semibold transition">Platform Admin</a>
-            <a href="https://sahanict.org" target="_blank" rel="noopener noreferrer" class="font-bold text-blue-700 hover:underline">
-                sahanict.org
-            </a>
+            <a href="#features" class="hover:text-blue-700 transition"><?= e(__('home.nav_features')) ?></a>
+            <a href="#how" class="hover:text-blue-700 transition"><?= e(__('home.nav_how')) ?></a>
+            <a href="#pricing" class="hover:text-blue-700 transition"><?= e(__('home.nav_pricing')) ?></a>
+            <a href="<?= $login ?>" class="hover:text-blue-700 transition"><?= e(__('home.sign_in')) ?></a>
+            <a href="<?= $register ?>" class="hover:text-blue-700 transition"><?= e(__('home.register')) ?></a>
+            <a href="<?= $platformLogin ?>" class="text-slate-700 hover:text-blue-700 font-semibold transition"><?= e(__('nav.platform_admin')) ?></a>
+            <?php if ($webUrl !== ''): ?>
+                <a href="<?= e($webUrl) ?>" target="_blank" rel="noopener noreferrer" class="font-bold text-blue-700 hover:underline">
+                    <?= e($webName ?: 'Website') ?>
+                </a>
+            <?php endif; ?>
         </div>
+
 
     </div>
 </footer>

@@ -11,7 +11,7 @@ require_platform();
 $id      = (int)(get('id') ?: post('id'));
 $company = db_one('SELECT * FROM companies WHERE id = ?', [$id]);
 if (!$company) {
-    flash('That restaurant no longer exists.', 'danger');
+    flash(__('pc.err_gone'), 'danger');
     redirect('platform/index.php');
 }
 $back  = 'platform/company.php?id=' . $id;
@@ -30,7 +30,7 @@ if (is_post()) {
         $ref    = mb_substr(post('reference'), 0, 100);
 
         if (!isset($planById[$planId])) {
-            flash('Choose a plan.', 'danger');
+            flash(__('pc.err_plan'), 'danger');
             redirect($back);
         }
         // A renewal paid before the old period ends starts the day after it,
@@ -52,10 +52,10 @@ if (is_post()) {
             $conn->commit();
         } catch (Throwable $e) {
             $conn->rollback();
-            flash('Payment not recorded: ' . $e->getMessage(), 'danger');
+            flash(__('pc.err_payment', '', ['error' => $e->getMessage()]), 'danger');
             redirect($back);
         }
-        flash('Payment recorded. ' . $company['name'] . ' is paid until ' . dt($to, 'd M Y') . '.');
+        flash(__('pc.paid_ok', '', ['name' => $company['name'], 'date' => dt($to, 'd M Y')]));
         redirect($back);
     }
 
@@ -67,13 +67,13 @@ if (is_post()) {
         $name   = post('name');
 
         if ($name === '' || !isset($planById[$planId])) {
-            flash('A restaurant needs a name and a plan.', 'danger');
+            flash(__('pc.err_name_plan'), 'danger');
         } else {
             db_exec(
                 'UPDATE companies SET name = ?, phone = ?, email = ?, plan_id = ?, status = ?, trial_ends_at = ?, paid_until = ? WHERE id = ?',
                 [$name, post('phone') ?: null, post('email') ?: null, $planId, $status, $trial, $paid, $id]
             );
-            flash('Restaurant updated.');
+            flash(__('pc.updated'));
         }
         redirect($back);
     }
@@ -83,13 +83,13 @@ if (is_post()) {
         $password = (string)($_POST['password'] ?? '');
         $target   = db_one('SELECT id, full_name FROM users WHERE id = ? AND company_id = ?', [$userId, $id]);
         if (!$target) {
-            flash('Choose one of this restaurant\'s users.', 'danger');
+            flash(__('pc.err_user'), 'danger');
         } elseif (strlen($password) < 6) {
-            flash('The new password must be at least 6 characters.', 'danger');
+            flash(__('pc.err_pw'), 'danger');
         } else {
             db_exec('UPDATE users SET password_hash = ?, is_active = 1 WHERE id = ? AND company_id = ?',
                 [password_hash($password, PASSWORD_DEFAULT), $userId, $id]);
-            flash('Password reset for ' . $target['full_name'] . '. Give them the new password.');
+            flash(__('pc.pw_reset_ok', '', ['name' => $target['full_name']]));
         }
         redirect($back);
     }
@@ -116,44 +116,44 @@ $menuCount = (int)db_value('SELECT COUNT(*) FROM menu_items WHERE company_id = ?
 
 $pageTitle = $company['name'];
 $platform  = true;
-$pageActions = '<a class="btn btn-outline btn-sm" href="' . url('platform/index.php') . '">All restaurants</a>';
+$pageActions = '<a class="btn btn-outline btn-sm" href="' . url('platform/index.php') . '">' . e(__('pc.all_restaurants')) . '</a>';
 require __DIR__ . '/../core/header.php';
 ?>
 
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
     <div class="stat-card <?= $access === 'ok' ? 'good' : 'bad' ?>">
-        <div class="label">Access</div>
+        <div class="label"><?= e(__('pc.access')) ?></div>
         <div class="value text-lg">
-            <?= match ($access) { 'ok' => $company['status'] === 'trial' ? 'On trial' : 'Active',
-                                  'suspended' => 'Suspended', default => 'Expired' } ?>
+            <?= e(match ($access) { 'ok' => $company['status'] === 'trial' ? __('pi.on_trial') : __('st.active'),
+                                  'suspended' => __('st.suspended'), default => __('st.expired') }) ?>
         </div>
         <small class="text-muted text-xs">
-            <?php if ($term['until'] === null): ?>no expiry date
-            <?php elseif ($term['days'] >= 0): ?><?= $term['days'] ?> day(s) left · <?= dt($term['until'], 'd M Y') ?>
-            <?php else: ?>lapsed <?= -$term['days'] ?> day(s) ago · <?= dt($term['until'], 'd M Y') ?>
+            <?php if ($term['until'] === null): ?><?= e(__('pc.no_expiry_date')) ?>
+            <?php elseif ($term['days'] >= 0): ?><?= e(__('pc.days_left', '', ['days' => $term['days'], 'date' => dt($term['until'], 'd M Y')])) ?>
+            <?php else: ?><?= e(__('pc.lapsed', '', ['days' => -$term['days'], 'date' => dt($term['until'], 'd M Y')])) ?>
             <?php endif; ?>
         </small>
     </div>
     <div class="stat-card accent">
-        <div class="label">Plan</div>
+        <div class="label"><?= e(__('pf.plan')) ?></div>
         <div class="value text-lg"><?= e($company['plan_name']) ?></div>
-        <small class="text-muted text-xs"><?= count(array_filter($users, fn($u) => (int)$u['is_active'])) ?> active users · <?= $menuCount ?> menu items</small>
+        <small class="text-muted text-xs"><?= e(__('pc.users_items', '', ['users' => count(array_filter($users, fn($u) => (int)$u['is_active'])), 'items' => $menuCount])) ?></small>
     </div>
     <div class="stat-card">
-        <div class="label">Orders</div>
+        <div class="label"><?= e(__('lbl.orders')) ?></div>
         <div class="value text-lg"><?= (int)$activity['orders'] ?></div>
-        <small class="text-muted text-xs">last <?= $activity['last_order'] ? dt($activity['last_order'], 'd M Y') : 'never' ?></small>
+        <small class="text-muted text-xs"><?= e(__('pc.last', '', ['date' => $activity['last_order'] ? dt($activity['last_order'], 'd M Y') : __('pc.never')])) ?></small>
     </div>
     <div class="stat-card">
-        <div class="label">Registered</div>
+        <div class="label"><?= e(__('pi.registered')) ?></div>
         <div class="value text-lg"><?= dt($company['created_at'], 'd M Y') ?></div>
-        <small class="text-muted text-xs">short name <?= e($company['slug']) ?></small>
+        <small class="text-muted text-xs"><?= e(__('pc.short_name', '', ['slug' => $company['slug']])) ?></small>
     </div>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
     <div class="card">
-        <div class="card-header">Record a payment</div>
+        <div class="card-header"><?= e(__('pc.record_payment_h')) ?></div>
         <div class="card-body">
             <form method="post" class="space-y-3" id="payForm">
                 <?= csrf_field() ?>
@@ -161,48 +161,48 @@ require __DIR__ . '/../core/header.php';
                 <input type="hidden" name="id" value="<?= $id ?>">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="label" for="pay_plan">Plan</label>
+                        <label class="label" for="pay_plan"><?= e(__('pf.plan')) ?></label>
                         <select id="pay_plan" name="plan_id" class="input">
                             <?php foreach ($plans as $p): ?>
                                 <?php if (!(int)$p['is_active'] && (int)$p['id'] !== (int)$company['plan_id']) continue; ?>
                                 <option value="<?= (int)$p['id'] ?>" data-price="<?= e($p['price_month']) ?>"
                                     <?= (int)$p['id'] === (int)$company['plan_id'] ? 'selected' : '' ?>>
-                                    <?= e($p['name']) ?> — <?= e(number_format((float)$p['price_month'], 2)) ?>/mo</option>
+                                    <?= e($p['name']) ?> — <?= e(number_format((float)$p['price_month'], 2)) ?><?= e(__('pc.per_month_short')) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div>
-                        <label class="label" for="pay_months">Months</label>
+                        <label class="label" for="pay_months"><?= e(__('pc.months')) ?></label>
                         <input type="number" id="pay_months" name="months" class="input" min="1" max="36" value="1">
                     </div>
                     <div>
-                        <label class="label" for="pay_amount">Amount received</label>
+                        <label class="label" for="pay_amount"><?= e(__('orders.amount_received')) ?></label>
                         <input type="number" id="pay_amount" name="amount" class="input" step="0.01" min="0">
                     </div>
                     <div>
-                        <label class="label" for="pay_method">Method</label>
+                        <label class="label" for="pay_method"><?= e(__('pc.method')) ?></label>
                         <select id="pay_method" name="method" class="input">
-                            <option value="mobile">Mobile money</option>
-                            <option value="cash">Cash</option>
-                            <option value="bank">Bank</option>
-                            <option value="card">Card</option>
+                            <option value="mobile"><?= e(__('pay.mobile')) ?></option>
+                            <option value="cash"><?= e(__('pay.cash')) ?></option>
+                            <option value="bank"><?= e(__('pay.bank')) ?></option>
+                            <option value="card"><?= e(__('pay.card')) ?></option>
                         </select>
                     </div>
                     <div class="col-span-2">
-                        <label class="label" for="pay_ref">Reference</label>
-                        <input type="text" id="pay_ref" name="reference" class="input" maxlength="100" placeholder="Transaction ID">
+                        <label class="label" for="pay_ref"><?= e(__('pc.reference')) ?></label>
+                        <input type="text" id="pay_ref" name="reference" class="input" maxlength="100" placeholder="<?= e(__('pc.txn_ph')) ?>">
                     </div>
                 </div>
                 <p class="text-muted text-xs m-0">
-                    Sets the status to Active. An early renewal starts the day after the current paid period ends.
+                    <?= e(__('pc.payment_help')) ?>
                 </p>
-                <button class="btn btn-brand">Record payment</button>
+                <button class="btn btn-brand"><?= e(__('pc.record_payment')) ?></button>
             </form>
         </div>
     </div>
 
     <div class="card">
-        <div class="card-header">Restaurant details</div>
+        <div class="card-header"><?= e(__('pc.details')) ?></div>
         <div class="card-body">
             <form method="post" class="space-y-3">
                 <?= csrf_field() ?>
@@ -210,19 +210,19 @@ require __DIR__ . '/../core/header.php';
                 <input type="hidden" name="id" value="<?= $id ?>">
                 <div class="grid grid-cols-2 gap-3">
                     <div class="col-span-2">
-                        <label class="label" for="c_name">Name</label>
+                        <label class="label" for="c_name"><?= e(__('lbl.name')) ?></label>
                         <input type="text" id="c_name" name="name" class="input" maxlength="100" value="<?= e($company['name']) ?>" required>
                     </div>
                     <div>
-                        <label class="label" for="c_phone">Phone</label>
+                        <label class="label" for="c_phone"><?= e(__('lbl.phone')) ?></label>
                         <input type="text" id="c_phone" name="phone" class="input" maxlength="40" value="<?= e($company['phone'] ?? '') ?>">
                     </div>
                     <div>
-                        <label class="label" for="c_email">Email</label>
+                        <label class="label" for="c_email"><?= e(__('lbl.email')) ?></label>
                         <input type="email" id="c_email" name="email" class="input" maxlength="120" value="<?= e($company['email'] ?? '') ?>">
                     </div>
                     <div>
-                        <label class="label" for="c_plan">Plan</label>
+                        <label class="label" for="c_plan"><?= e(__('pf.plan')) ?></label>
                         <select id="c_plan" name="plan_id" class="input">
                             <?php foreach ($plans as $p): ?>
                                 <option value="<?= (int)$p['id'] ?>" <?= (int)$p['id'] === (int)$company['plan_id'] ? 'selected' : '' ?>><?= e($p['name']) ?></option>
@@ -230,24 +230,24 @@ require __DIR__ . '/../core/header.php';
                         </select>
                     </div>
                     <div>
-                        <label class="label" for="c_status">Status</label>
+                        <label class="label" for="c_status"><?= e(__('lbl.status')) ?></label>
                         <select id="c_status" name="status" class="input">
-                            <?php foreach (['trial' => 'Trial', 'active' => 'Active (paid)', 'suspended' => 'Suspended'] as $k => $label): ?>
-                                <option value="<?= $k ?>" <?= $company['status'] === $k ? 'selected' : '' ?>><?= $label ?></option>
+                            <?php foreach (['trial' => __('st.trial'), 'active' => __('pc.active_paid'), 'suspended' => __('st.suspended')] as $k => $label): ?>
+                                <option value="<?= $k ?>" <?= $company['status'] === $k ? 'selected' : '' ?>><?= e($label) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div>
-                        <label class="label" for="c_trial">Trial ends</label>
+                        <label class="label" for="c_trial"><?= e(__('pc.trial_ends')) ?></label>
                         <input type="date" id="c_trial" name="trial_ends_at" class="input" value="<?= e($company['trial_ends_at'] ?? '') ?>">
                     </div>
                     <div>
-                        <label class="label" for="c_paid">Paid until</label>
+                        <label class="label" for="c_paid"><?= e(__('pc.paid_until')) ?></label>
                         <input type="date" id="c_paid" name="paid_until" class="input" value="<?= e($company['paid_until'] ?? '') ?>">
                     </div>
                 </div>
-                <p class="text-muted text-xs m-0">Leave "Paid until" blank for an Active restaurant that never expires.</p>
-                <button class="btn btn-outline">Save details</button>
+                <p class="text-muted text-xs m-0"><?= e(__('pc.paid_until_help')) ?></p>
+                <button class="btn btn-outline"><?= e(__('pc.save_details')) ?></button>
             </form>
         </div>
     </div>
@@ -255,15 +255,15 @@ require __DIR__ . '/../core/header.php';
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
     <div class="card">
-        <div class="card-header">Users</div>
+        <div class="card-header"><?= e(__('nav.users')) ?></div>
         <table class="tbl">
-            <thead><tr><th>Name</th><th>Username</th><th>Role</th><th class="text-center">Active</th></tr></thead>
+            <thead><tr><th><?= e(__('lbl.name')) ?></th><th><?= e(__('auth.username')) ?></th><th><?= e(__('lbl.role')) ?></th><th class="text-center"><?= e(__('st.active')) ?></th></tr></thead>
             <tbody>
             <?php foreach ($users as $u): ?>
                 <tr>
                     <td><?= e($u['full_name']) ?></td>
                     <td class="font-mono text-sm"><?= e($u['username']) ?></td>
-                    <td><?= e(ucfirst($u['role'])) ?></td>
+                    <td><?= e(__('role.' . $u['role'], ucfirst($u['role']))) ?></td>
                     <td class="text-center"><?= (int)$u['is_active'] ? '✓' : '<span class="text-muted">—</span>' ?></td>
                 </tr>
             <?php endforeach; ?>
@@ -275,7 +275,7 @@ require __DIR__ . '/../core/header.php';
                 <input type="hidden" name="action" value="password">
                 <input type="hidden" name="id" value="<?= $id ?>">
                 <div>
-                    <label class="label" for="pw_user">Reset password for</label>
+                    <label class="label" for="pw_user"><?= e(__('pc.reset_for')) ?></label>
                     <select id="pw_user" name="user_id" class="input">
                         <?php foreach ($users as $u): ?>
                             <option value="<?= (int)$u['id'] ?>"><?= e($u['full_name'] . ' (' . $u['username'] . ')') ?></option>
@@ -283,30 +283,30 @@ require __DIR__ . '/../core/header.php';
                     </select>
                 </div>
                 <div>
-                    <label class="label" for="pw_new">New password</label>
+                    <label class="label" for="pw_new"><?= e(__('pc.new_password')) ?></label>
                     <input type="text" id="pw_new" name="password" class="input" minlength="6" required autocomplete="off">
                 </div>
-                <button class="btn btn-outline">Reset</button>
+                <button class="btn btn-outline"><?= e(__('pc.reset')) ?></button>
             </form>
         </div>
     </div>
 
     <div class="card">
-        <div class="card-header">Payments</div>
+        <div class="card-header"><?= e(__('pc.payments')) ?></div>
         <table class="tbl">
-            <thead><tr><th>Date</th><th>Plan</th><th>Period</th><th>Ref</th><th class="text-right">Amount</th></tr></thead>
+            <thead><tr><th><?= e(__('lbl.date')) ?></th><th><?= e(__('pf.plan')) ?></th><th><?= e(__('pc.period')) ?></th><th><?= e(__('pc.ref')) ?></th><th class="text-right"><?= e(__('lbl.amount')) ?></th></tr></thead>
             <tbody>
             <?php foreach ($payments as $p): ?>
                 <tr>
                     <td class="text-nowrap"><?= dt($p['created_at'], 'd M Y') ?></td>
-                    <td><?= e($p['plan_name']) ?> · <?= (int)$p['months'] ?> mo</td>
+                    <td><?= e($p['plan_name']) ?> · <?= e(__('pc.months_short', '', ['n' => (int)$p['months']])) ?></td>
                     <td class="text-nowrap text-xs"><?= dt($p['period_from'], 'd M Y') ?> – <?= dt($p['period_to'], 'd M Y') ?></td>
-                    <td class="text-muted text-xs"><?= e(ucfirst($p['method'])) ?> <?= e($p['reference'] ?? '') ?></td>
+                    <td class="text-muted text-xs"><?= e(__('pay.' . $p['method'], ucfirst($p['method']))) ?> <?= e($p['reference'] ?? '') ?></td>
                     <td class="text-right"><?= e(number_format((float)$p['amount'], 2)) ?></td>
                 </tr>
             <?php endforeach; ?>
             <?php if (!$payments): ?>
-                <tr><td colspan="5" class="text-center text-muted py-8">No payments yet.</td></tr>
+                <tr><td colspan="5" class="text-center text-muted py-8"><?= e(__('pc.no_payments')) ?></td></tr>
             <?php endif; ?>
             </tbody>
         </table>
