@@ -9,6 +9,19 @@ declare(strict_types=1);
 
 
 
+// ---------------------------------------------------------------- database
+// const DB_HOST = 'localhost';
+// const DB_USER = 'sahan_supplement';
+// const DB_PASS = 'HG2L%zw6l7qf_tyy';
+// // The test runner (tests/run_all.sh) serves the app from PHP's built-in server
+// // against a throwaway copy. The override is honoured ONLY under that server,
+// // so Apache — the real till — can never be pointed at another database.
+// define('DB_NAME', PHP_SAPI === 'cli-server' && getenv('sahanict_restpos')
+//     ? (string)getenv('sahanict_restpos')
+//     : 'sahanict_restpos');
+
+
+
 
 // ---------------------------------------------------------------- database
 const DB_HOST = 'localhost';

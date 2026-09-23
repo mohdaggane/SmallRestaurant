@@ -11,371 +11,565 @@ if (is_logged_in()) {
 }
 
 $plans = db_all('SELECT * FROM plans WHERE is_active = 1 ORDER BY sort_order, price_month');
-// The cheapest paid plan gets the "Most popular" badge.
 $paid     = array_values(array_filter($plans, fn($p) => (float)$p['price_month'] > 0));
 $featured = $paid[0]['id'] ?? null;
 
-$register = url('public/register.php');
-$login    = url('public/login.php');
-
-$features = [
-    ['🧾', 'Fast POS terminal', 'Tap items, add notes, hold a table or charge at once. Built for a busy counter, works on a tablet or a laptop.'],
-    ['👨‍🍳', 'Live kitchen screen', 'Orders reach the kitchen as soon as they are taken. Cooks mark items preparing and served, and waiting orders stand out.'],
-    ['🍽️', 'Open tables & extra rounds', 'Add a second round to an open bill, remove what the kitchen has not started, and settle when the guest is ready.'],
-    ['🧮', 'Cash drawer control', 'Open a shift with a float, record cash expenses, and close it against what the drawer should hold, to the cent.'],
-    ['📱', 'Mobile money on every bill', 'Bills print your merchant dial code with the exact amount, so customers pay by phone in seconds.'],
-    ['📈', 'Reports that add up', 'Daily takings, unpaid bills, profit and loss, VAT and best sellers, with CSV export and an end-of-day slip.'],
-];
-
-$roles = [
-    ['Admin',   'Menu, staff, prices, VAT, reports and billing. Sees everything.'],
-    ['Cashier', 'Takes payment, runs the cash drawer, records expenses.'],
-    ['Waiter',  'Takes orders to the kitchen. Cannot handle money.'],
-    ['Kitchen', 'Sees only the preparation screen.'],
-];
-
-$faqs = [
-    ['Do I need to install anything?', 'No. It runs in the browser on any tablet, phone or computer. Sign up, add your menu and start selling.'],
-    ['Is my restaurant\'s data private?', 'Yes. Every restaurant has its own menu, staff, orders and reports. No other restaurant on the system can see them.'],
-    ['What happens when the free trial ends?', 'Choose a plan and pay the platform owner. Your data stays exactly where it was, and your staff can sign in again as soon as the payment is recorded.'],
-    ['Can I charge VAT?', 'Yes. Set your VAT rate in Settings. Every bill and receipt shows the amount before VAT, the VAT and the total, and reports keep them apart.'],
-    ['How do my staff sign in?', 'You create an account for each person under Users and choose their role. They sign in with their own username and password.'],
-];
+$register      = url('public/register.php');
+$login         = url('public/login.php');
+$platformLogin = url('platform/login.php');
 
 /** "$10" or "$12.50" — whole prices without the cents. */
 function plan_price(float $p): string
 {
     return '$' . (fmod($p, 1.0) == 0.0 ? number_format($p, 0) : number_format($p, 2));
 }
+
+$faqs = [
+    [
+        'Do I need to buy special equipment?',
+        'No. It works in the web browser on any tablet, phone, laptop, or computer you already have. You can connect standard receipt printers anytime.'
+    ],
+    [
+        'Can customers pay with mobile money?',
+        'Yes. Every bill automatically prints your merchant payment code and exact total, so customers can pay by phone in seconds.'
+    ],
+    [
+        'How do my employees sign in?',
+        'You create simple accounts for each staff member with their specific role (Admin, Cashier, Waiter, or Kitchen). They only see what they need for their job.'
+    ],
+    [
+        'What happens after the 14-day free trial?',
+        'You can choose a simple monthly plan to keep going. All your menu items, orders, and sales history stay right where they are.'
+    ]
+];
 ?>
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Restaurant POS — run your restaurant from one screen</title>
-    <meta name="description" content="Point of sale for cafés and restaurants: POS terminal, kitchen screen, cash drawer, mobile money and reports. Free <?= TRIAL_DAYS ?>-day trial.">
+    <title>Restaurant POS by SAHAN ICT — Easy Point of Sale & Kitchen System</title>
+    <meta name="description" content="Simple, fast restaurant POS software by SAHAN ICT. Take orders, send tickets to the kitchen, accept mobile money and track daily cash sales.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="<?= url('assets/css/app.css') ?>">
-</head>
-<body class="bg-white text-ink font-sans antialiased">
+    <style>
+        :root {
+            --sn: #1e2f6e;   /* navy */
+            --sb: #1a7fe8;   /* blue */
+            --sn2: #152257;
+            --sb2: #1567c4;
+            --sl: #e8f1fd;
+        }
 
-<!-- ───────────────────────── Nav ───────────────────────── -->
-<header class="sticky top-0 z-40 bg-white/85 backdrop-blur border-b border-line/70">
+        body { color: #1e293b; font-family: 'Inter', sans-serif; }
+
+        .btn-brand-primary {
+            background: linear-gradient(135deg, var(--sn) 0%, var(--sb) 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(26, 127, 232, 0.28);
+            transition: all 0.2s ease;
+        }
+        .btn-brand-primary:hover {
+            background: linear-gradient(135deg, var(--sn2) 0%, var(--sb2) 100%);
+            box-shadow: 0 6px 20px rgba(26, 127, 232, 0.38);
+            transform: translateY(-1px);
+        }
+
+        .btn-brand-outline {
+            border: 1.5px solid #cbd5e1;
+            color: var(--sn);
+            background: #ffffff;
+            transition: all 0.2s ease;
+        }
+        .btn-brand-outline:hover {
+            border-color: var(--sb);
+            color: var(--sb);
+            background: #f8fafc;
+        }
+
+        details summary::-webkit-details-marker { display: none; }
+    </style>
+</head>
+<body class="bg-white antialiased text-slate-800">
+
+<!-- ════════════════════ NAVBAR ════════════════════ -->
+<header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
     <nav class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <a href="#top" class="flex items-center gap-2 no-underline">
-            <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand to-brand-dark text-white grid place-items-center text-lg shadow-sm">☕</span>
-            <span class="font-bold text-lg tracking-tight text-ink">Restaurant<span class="text-brand">POS</span></span>
+        
+        <!-- Logo -->
+        <a href="<?= url('') ?>" class="flex items-center gap-2.5 no-underline group">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow text-white" style="background: linear-gradient(135deg, var(--sn), var(--sb));">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M17 6s-2-2-5-2-5 1.8-5 4c0 2.5 2.5 3.5 5 4.5s5 2 5 4.5c0 2.2-2 3-5 3s-5-2-5-2"
+                          stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div>
+                <div class="font-extrabold text-[15px] tracking-tight leading-none" style="color:var(--sn);">SAHAN ICT</div>
+                <div class="text-[9px] font-bold tracking-widest uppercase mt-0.5" style="color:var(--sb);">Restaurant POS</div>
+            </div>
         </a>
-        <div class="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
-            <a href="#features" class="hover:text-brand-dark transition-colors">Features</a>
-            <a href="#how" class="hover:text-brand-dark transition-colors">How it works</a>
-            <a href="#pricing" class="hover:text-brand-dark transition-colors">Pricing</a>
-            <a href="#faq" class="hover:text-brand-dark transition-colors">FAQ</a>
+
+        <!-- Links -->
+        <div class="hidden md:flex items-center gap-7 text-sm font-semibold text-slate-600">
+            <a href="#features" class="hover:text-blue-600 transition-colors">Features</a>
+            <a href="#how" class="hover:text-blue-600 transition-colors">How It Works</a>
+            <a href="#pricing" class="hover:text-blue-600 transition-colors">Pricing</a>
+            <a href="#faq" class="hover:text-blue-600 transition-colors">FAQ</a>
         </div>
-        <div class="hidden md:flex items-center gap-3">
-            <a href="<?= $login ?>" class="text-sm font-semibold text-ink hover:text-brand-dark px-3 py-2">Sign in</a>
-            <a href="<?= $register ?>" class="text-sm font-semibold text-white bg-brand hover:bg-brand-dark rounded-lg px-4 py-2.5 shadow-sm transition-colors">Start free trial</a>
+
+        <!-- Action Buttons -->
+        <div class="hidden sm:flex items-center gap-3">
+            <a href="<?= $login ?>" class="text-sm font-semibold px-3 py-2 text-slate-700 hover:text-blue-700 no-underline transition-colors">
+                Sign In
+            </a>
+            <a href="<?= $register ?>" class="btn-brand-primary text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl no-underline inline-flex items-center gap-1.5">
+                <span>Start Free Trial</span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+            </a>
         </div>
-        <button type="button" id="menuBtn" class="md:hidden w-10 h-10 grid place-items-center rounded-lg border border-line" aria-label="Open menu" aria-expanded="false">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+
+        <!-- Mobile Menu Toggle -->
+        <button id="navToggle" class="sm:hidden p-2 text-slate-600" aria-label="Toggle menu">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
         </button>
     </nav>
-    <div id="mobileMenu" class="hidden md:hidden border-t border-line bg-white px-4 pb-4">
-        <div class="flex flex-col py-2 text-sm font-medium">
-            <a href="#features" class="py-2.5">Features</a>
-            <a href="#how" class="py-2.5">How it works</a>
-            <a href="#pricing" class="py-2.5">Pricing</a>
-            <a href="#faq" class="py-2.5">FAQ</a>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-            <a href="<?= $login ?>" class="text-center text-sm font-semibold border border-line rounded-lg py-2.5">Sign in</a>
-            <a href="<?= $register ?>" class="text-center text-sm font-semibold text-white bg-brand rounded-lg py-2.5">Start free trial</a>
+
+    <!-- Mobile Dropdown -->
+    <div id="mobileMenu" class="hidden sm:hidden border-t border-slate-200 bg-white px-5 py-4 space-y-3 text-sm font-medium">
+        <a href="#features" class="block py-1 text-slate-700">Features</a>
+        <a href="#how" class="block py-1 text-slate-700">How It Works</a>
+        <a href="#pricing" class="block py-1 text-slate-700">Pricing</a>
+        <a href="#faq" class="block py-1 text-slate-700">FAQ</a>
+        <div class="pt-3 border-t border-slate-100 flex gap-2">
+            <a href="<?= $login ?>" class="flex-1 text-center py-2 text-xs font-bold border border-slate-200 rounded-lg text-slate-700 no-underline">Sign In</a>
+            <a href="<?= $register ?>" class="flex-1 text-center py-2 text-xs font-bold btn-brand-primary rounded-lg no-underline text-white">Free Trial</a>
         </div>
     </div>
 </header>
 
-<main id="top">
-
-<!-- ───────────────────────── Hero ───────────────────────── -->
-<section class="relative overflow-hidden">
-    <div class="absolute inset-0 -z-10 bg-gradient-to-b from-brand-light via-white to-white"></div>
-    <div class="absolute -top-24 -right-24 -z-10 w-[28rem] h-[28rem] rounded-full bg-accent/20 blur-3xl"></div>
-    <div class="absolute top-40 -left-32 -z-10 w-[24rem] h-[24rem] rounded-full bg-brand/10 blur-3xl"></div>
-
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-20 lg:pt-24 lg:pb-28 grid lg:grid-cols-2 gap-14 items-center">
-        <div>
-            <span class="inline-flex items-center gap-2 text-xs font-semibold text-brand-dark bg-white border border-line rounded-full px-3 py-1.5 shadow-sm">
-                <span class="w-2 h-2 rounded-full bg-ok"></span>
-                Free for <?= TRIAL_DAYS ?> days · no card needed
-            </span>
-            <h1 class="mt-6 text-4xl sm:text-5xl lg:text-[3.4rem] font-extrabold tracking-tight leading-[1.08]">
-                Run your restaurant<br class="hidden sm:block">
-                <span class="bg-gradient-to-r from-brand to-accent bg-clip-text text-transparent">from one screen.</span>
-            </h1>
-            <p class="mt-6 text-lg text-muted leading-relaxed max-w-xl">
-                Take orders, send them to the kitchen, get paid in cash or by mobile money,
-                and close the day knowing every dollar is accounted for.
-            </p>
-            <div class="mt-8 flex flex-col sm:flex-row gap-3">
-                <a href="<?= $register ?>" class="inline-flex justify-center items-center gap-2 text-base font-semibold text-white bg-brand hover:bg-brand-dark rounded-xl px-6 py-3.5 shadow-lg shadow-brand/20 transition-colors">
-                    Register your restaurant
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                </a>
-                <a href="<?= $login ?>" class="inline-flex justify-center items-center text-base font-semibold text-ink bg-white border border-line hover:border-brand rounded-xl px-6 py-3.5 transition-colors">
-                    Sign in to your restaurant
-                </a>
-            </div>
-            <ul class="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
-                <li class="flex items-center gap-1.5"><span class="text-ok font-bold">✓</span> Set up in minutes</li>
-                <li class="flex items-center gap-1.5"><span class="text-ok font-bold">✓</span> Works on any device</li>
-                <li class="flex items-center gap-1.5"><span class="text-ok font-bold">✓</span> Your data stays private</li>
-            </ul>
-        </div>
-
-        <!-- Product preview: an illustration of the POS terminal, drawn in HTML -->
-        <div class="relative" aria-hidden="true">
-            <div class="relative rounded-2xl bg-white border border-line shadow-2xl shadow-brand-dark/10 overflow-hidden">
-                <div class="h-11 bg-gradient-to-r from-brand-dark to-brand flex items-center justify-between px-4 text-white">
-                    <div class="flex items-center gap-2 text-sm font-semibold"><span>☕</span> Your Café</div>
-                    <div class="flex gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-white/40"></span><span class="w-2.5 h-2.5 rounded-full bg-white/40"></span><span class="w-2.5 h-2.5 rounded-full bg-accent"></span></div>
+<!-- ════════════════════ HERO SECTION ════════════════════ -->
+<section class="relative bg-gradient-to-b from-blue-50/60 via-slate-50/40 to-white pt-12 pb-16 lg:pt-18 lg:pb-24 border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        
+        <div class="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+            
+            <!-- Left Headline & Description -->
+            <div class="lg:col-span-7 text-center lg:text-left">
+                
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-blue-200 text-xs font-semibold text-blue-700 mb-5 shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>Free <?= TRIAL_DAYS ?>-Day Trial &middot; No Credit Card Needed</span>
                 </div>
-                <div class="grid grid-cols-5">
-                    <div class="col-span-3 p-4 bg-[#faf7f3]">
-                        <div class="flex gap-1.5 mb-3 text-[11px] font-semibold">
-                            <span class="px-2.5 py-1 rounded-full bg-brand text-white">Hot drinks</span>
-                            <span class="px-2.5 py-1 rounded-full bg-white border border-line">Breakfast</span>
-                            <span class="px-2.5 py-1 rounded-full bg-white border border-line">Mains</span>
+
+                <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight mb-4">
+                    The easy POS system for restaurants &amp; cafes.
+                </h1>
+
+                <p class="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto lg:mx-0 mb-7">
+                    Take customer orders quickly, send tickets straight to the kitchen screen, accept cash or mobile money, and balance your daily cash drawer with zero stress.
+                </p>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 max-w-md mx-auto lg:mx-0">
+                    <a href="<?= $register ?>" class="btn-brand-primary w-full sm:w-auto px-6 py-3.5 rounded-xl font-bold text-sm text-center no-underline inline-flex items-center justify-center gap-2">
+                        <span>Start Free <?= TRIAL_DAYS ?>-Day Trial</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </a>
+                    <a href="<?= $login ?>" class="btn-brand-outline w-full sm:w-auto px-6 py-3.5 rounded-xl font-semibold text-sm text-center no-underline">
+                        Sign In to Station
+                    </a>
+                </div>
+
+                <!-- Trust Points -->
+                <div class="mt-8 pt-6 border-t border-slate-200/80 flex flex-wrap items-center justify-center lg:justify-start gap-y-2 gap-x-6 text-xs font-semibold text-slate-600">
+                    <span class="flex items-center gap-1.5"><span class="text-emerald-600 text-sm">✓</span> Works on tablets &amp; laptops</span>
+                    <span class="flex items-center gap-1.5"><span class="text-emerald-600 text-sm">✓</span> Fast receipt printing</span>
+                    <span class="flex items-center gap-1.5"><span class="text-emerald-600 text-sm">✓</span> 100% private data</span>
+                </div>
+
+            </div>
+
+            <!-- Right Visual: Clean Restaurant Order Card -->
+            <div class="lg:col-span-5">
+                <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-xl shadow-slate-200/80 border border-slate-200 max-w-md mx-auto">
+                    
+                    <!-- Top POS Header -->
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl">🍽️</span>
+                            <div>
+                                <div class="font-bold text-sm text-slate-900">Table 05 &middot; Lunch</div>
+                                <div class="text-[11px] text-slate-400">Cashier: Ahmed &middot; Live</div>
+                            </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <?php foreach ([['Milk tea', '0.50'], ['Coffee', '1.00'], ['Spiced tea', '0.70'], ['Mango juice', '1.50'], ['Omelette', '2.00'], ['Rice & beef', '4.00']] as $i => [$n, $p]): ?>
-                                <div class="rounded-lg bg-white border <?= $i === 1 ? 'border-accent ring-2 ring-accent/30' : 'border-line' ?> p-2.5">
-                                    <div class="text-[12px] font-semibold leading-tight"><?= $n ?></div>
-                                    <div class="text-[12px] font-bold text-brand mt-2">$<?= $p ?></div>
-                                </div>
-                            <?php endforeach; ?>
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-100">
+                            Sent to Kitchen
+                        </span>
+                    </div>
+
+                    <!-- Items List -->
+                    <div class="py-4 space-y-2.5 text-xs sm:text-sm">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="w-5 h-5 rounded bg-blue-50 text-blue-700 font-bold flex items-center justify-center text-xs">2</span>
+                                <span class="font-medium text-slate-800">Spiced Milk Tea</span>
+                            </div>
+                            <span class="font-semibold text-slate-900">$1.50</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="w-5 h-5 rounded bg-blue-50 text-blue-700 font-bold flex items-center justify-center text-xs">1</span>
+                                <span class="font-medium text-slate-800">Chicken Steak &amp; Rice</span>
+                            </div>
+                            <span class="font-semibold text-slate-900">$5.00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="w-5 h-5 rounded bg-blue-50 text-blue-700 font-bold flex items-center justify-center text-xs">1</span>
+                                <span class="font-medium text-slate-800">Fresh Mango Juice</span>
+                            </div>
+                            <span class="font-semibold text-slate-900">$1.50</span>
                         </div>
                     </div>
-                    <div class="col-span-2 border-l border-line p-4 flex flex-col">
-                        <div class="text-[11px] uppercase tracking-wider text-muted font-semibold">Table 4</div>
-                        <div class="mt-2 space-y-2 text-[12px] flex-1">
-                            <div class="flex justify-between"><span>2 × Milk tea</span><span class="font-semibold">1.00</span></div>
-                            <div class="flex justify-between"><span>1 × Coffee</span><span class="font-semibold">1.00</span></div>
-                            <div class="flex justify-between"><span>1 × Omelette</span><span class="font-semibold">2.00</span></div>
+
+                    <!-- Totals and Payment Details -->
+                    <div class="pt-3 border-t border-slate-100 space-y-1.5 text-xs">
+                        <div class="flex justify-between text-slate-500">
+                            <span>Subtotal</span>
+                            <span>$8.00</span>
                         </div>
-                        <div class="border-t border-dashed border-line pt-2 mt-3 text-[12px] flex justify-between font-bold">
-                            <span>Total</span><span>$4.00</span>
+                        <div class="flex justify-between text-slate-500">
+                            <span>Payment Option</span>
+                            <span class="text-blue-700 font-semibold">Cash &middot; Mobile Money Dial</span>
                         </div>
-                        <div class="mt-3 rounded-lg bg-accent text-ink text-center text-[12px] font-bold py-2">Charge &amp; print</div>
+                        <div class="flex justify-between text-sm font-bold text-slate-900 pt-1 border-t border-dashed border-slate-200">
+                            <span>Total Due</span>
+                            <span class="text-base text-blue-700 font-extrabold">$8.00</span>
+                        </div>
                     </div>
+
+                    <!-- Button Demo -->
+                    <div class="mt-4 pt-2">
+                        <div class="w-full py-2.5 rounded-xl text-center text-xs font-bold text-white bg-gradient-to-r from-blue-700 to-blue-600 shadow">
+                            ✓ Complete Order &amp; Print Receipt
+                        </div>
+                    </div>
+
                 </div>
             </div>
-            <!-- floating cards -->
-            <div class="hidden sm:flex absolute -left-6 -bottom-14 bg-white border border-line rounded-xl shadow-xl px-4 py-3 items-center gap-3">
-                <span class="w-9 h-9 rounded-lg bg-ok/10 text-ok grid place-items-center">✓</span>
-                <div class="text-xs leading-tight"><div class="font-bold text-sm">Drawer balanced</div><div class="text-muted">Shift closed · $0.00 variance</div></div>
-            </div>
-            <div class="hidden sm:flex absolute -right-4 -top-5 bg-white border border-line rounded-xl shadow-xl px-4 py-3 items-center gap-3">
-                <span class="text-xl">👨‍🍳</span>
-                <div class="text-xs leading-tight"><div class="font-bold text-sm">Sent to kitchen</div><div class="text-muted">Table 4 · 3 items</div></div>
-            </div>
+
         </div>
+
     </div>
 </section>
 
-<!-- ───────────────────────── Built for ───────────────────────── -->
-<section class="border-y border-line bg-[#faf7f3]">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-wrap justify-center gap-x-10 gap-y-3 text-sm font-semibold text-muted">
-        <span>Built for</span>
-        <span class="text-ink">☕ Tea shops</span>
-        <span class="text-ink">🥐 Cafés</span>
-        <span class="text-ink">🍛 Restaurants</span>
-        <span class="text-ink">🥤 Juice bars</span>
-        <span class="text-ink">🍔 Fast food</span>
-    </div>
-</section>
-
-<!-- ───────────────────────── Features ───────────────────────── -->
-<section id="features" class="py-20 lg:py-28 scroll-mt-16">
+<!-- ════════════════════ WHO IT IS BUILT FOR ════════════════════ -->
+<section class="py-6 bg-slate-50 border-b border-slate-200">
     <div class="max-w-6xl mx-auto px-4 sm:px-6">
-        <div class="max-w-2xl mx-auto text-center">
-            <p class="text-sm font-bold uppercase tracking-widest text-brand">Everything in one place</p>
-            <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">From the first order to the end-of-day count</h2>
-            <p class="mt-4 text-muted text-lg">No separate apps for the till, the kitchen and the books. One system your whole team uses.</p>
-        </div>
-        <div class="mt-14 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            <?php foreach ($features as [$icon, $title, $text]): ?>
-                <div class="group rounded-2xl border border-line bg-white p-6 hover:shadow-xl hover:shadow-brand-dark/5 hover:-translate-y-0.5 transition-all duration-200">
-                    <div class="w-12 h-12 rounded-xl bg-brand-light grid place-items-center text-2xl group-hover:scale-110 transition-transform"><?= $icon ?></div>
-                    <h3 class="mt-5 text-lg font-bold"><?= e($title) ?></h3>
-                    <p class="mt-2 text-muted leading-relaxed text-[15px]"><?= e($text) ?></p>
-                </div>
-            <?php endforeach; ?>
+        <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm font-semibold text-slate-600">
+            <span class="text-slate-400 uppercase tracking-wider text-xs">Perfect for:</span>
+            <span class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-slate-800">☕ Cafes &amp; Tea Shops</span>
+            <span class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-slate-800">🍛 Restaurants &amp; Grills</span>
+            <span class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-slate-800">🍔 Fast Food &amp; Takeout</span>
+            <span class="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm text-slate-800">🥤 Juice Bars &amp; Bakeries</span>
         </div>
     </div>
 </section>
 
-<!-- ───────────────────────── Roles ───────────────────────── -->
-<section class="py-20 lg:py-24 bg-gradient-to-br from-brand-dark to-brand text-white">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
-        <div>
-            <p class="text-sm font-bold uppercase tracking-widest text-accent">Your whole team</p>
-            <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">Everyone sees only what their job needs</h2>
-            <p class="mt-4 text-white/80 text-lg leading-relaxed">
-                Give each person their own sign-in. Waiters can't take money, the kitchen only sees
-                orders, and only you see the profit.
+<!-- ════════════════════ 4 MAIN FEATURES ════════════════════ -->
+<section id="features" class="py-16 lg:py-20 bg-white border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        
+        <div class="text-center max-w-xl mx-auto mb-12">
+            <span class="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Simple Features</span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2.5">
+                Everything you need to run your floor.
+            </h2>
+            <p class="text-slate-500 text-sm mt-2">
+                No complex manuals or complicated setup. Designed so staff can learn it in 5 minutes.
             </p>
-            <a href="<?= $register ?>" class="mt-8 inline-flex items-center gap-2 font-semibold bg-accent text-ink rounded-xl px-6 py-3.5 hover:bg-white transition-colors">
-                Set up your team
-            </a>
         </div>
-        <div class="grid sm:grid-cols-2 gap-4">
-            <?php foreach ($roles as [$role, $text]): ?>
-                <div class="rounded-2xl bg-white/10 border border-white/15 p-5 backdrop-blur">
-                    <div class="text-base font-bold"><?= e($role) ?></div>
-                    <p class="mt-1.5 text-sm text-white/75 leading-relaxed"><?= e($text) ?></p>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            <!-- Feature 1 -->
+            <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition">
+                <div class="w-12 h-12 rounded-xl bg-blue-100/70 text-blue-700 flex items-center justify-center text-xl mb-4">
+                    🧾
                 </div>
-            <?php endforeach; ?>
+                <h3 class="font-bold text-slate-900 text-base mb-1.5">Fast Counter POS</h3>
+                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                    Tap menu items, hold open tables, add extra rounds, and print customer bills in seconds.
+                </p>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition">
+                <div class="w-12 h-12 rounded-xl bg-blue-100/70 text-blue-700 flex items-center justify-center text-xl mb-4">
+                    👨‍🍳
+                </div>
+                <h3 class="font-bold text-slate-900 text-base mb-1.5">Live Kitchen Screen</h3>
+                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                    Cooks see orders instantly as they are taken. Mark food preparing and served without lost paper tickets.
+                </p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition">
+                <div class="w-12 h-12 rounded-xl bg-blue-100/70 text-blue-700 flex items-center justify-center text-xl mb-4">
+                    💵
+                </div>
+                <h3 class="font-bold text-slate-900 text-base mb-1.5">Cash Drawer Balance</h3>
+                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                    Open shifts with an opening float, log cash expenses, and count your cash drawer down to the exact dollar.
+                </p>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-300 transition">
+                <div class="w-12 h-12 rounded-xl bg-blue-100/70 text-blue-700 flex items-center justify-center text-xl mb-4">
+                    📱
+                </div>
+                <h3 class="font-bold text-slate-900 text-base mb-1.5">Mobile Money Ready</h3>
+                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                    Receipts automatically show your merchant phone dial code with the exact total for fast mobile customer payments.
+                </p>
+            </div>
+
         </div>
+
     </div>
 </section>
 
-<!-- ───────────────────────── How it works ───────────────────────── -->
-<section id="how" class="py-20 lg:py-28 scroll-mt-16">
+<!-- ════════════════════ HOW IT WORKS (3 SIMPLE STEPS) ════════════════════ -->
+<section id="how" class="py-16 lg:py-20 bg-slate-50 border-b border-slate-200">
     <div class="max-w-6xl mx-auto px-4 sm:px-6">
-        <div class="max-w-2xl mx-auto text-center">
-            <p class="text-sm font-bold uppercase tracking-widest text-brand">How it works</p>
-            <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">Open for business today</h2>
+        
+        <div class="text-center max-w-xl mx-auto mb-12">
+            <span class="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Easy Setup</span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2.5">
+                Up and running in 3 simple steps.
+            </h2>
         </div>
-        <ol class="mt-14 grid md:grid-cols-3 gap-6 list-none p-0">
-            <?php foreach ([
-                ['Register your restaurant', 'Enter your restaurant name and create your admin account. Your trial starts at once.'],
-                ['Add your menu and staff', 'Add categories, items and prices, then an account for each cashier, waiter and cook.'],
-                ['Start selling', 'Open a cash drawer shift, take the first order and watch it appear in the kitchen.'],
-            ] as $i => [$title, $text]): ?>
-                <li class="relative rounded-2xl border border-line p-7 bg-white">
-                    <span class="absolute -top-4 left-7 w-9 h-9 rounded-full bg-brand text-white font-bold grid place-items-center shadow-md"><?= $i + 1 ?></span>
-                    <h3 class="mt-3 text-lg font-bold"><?= e($title) ?></h3>
-                    <p class="mt-2 text-muted leading-relaxed"><?= e($text) ?></p>
-                </li>
-            <?php endforeach; ?>
-        </ol>
+
+        <div class="grid md:grid-cols-3 gap-6">
+            
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
+                <span class="w-8 h-8 rounded-lg bg-blue-700 text-white font-bold flex items-center justify-center text-sm mb-3">1</span>
+                <h3 class="font-bold text-slate-900 text-base mb-1">Create Your Restaurant</h3>
+                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                    Fill in your restaurant name and admin password. Your 14-day free trial opens instantly.
+                </p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
+                <span class="w-8 h-8 rounded-lg bg-blue-700 text-white font-bold flex items-center justify-center text-sm mb-3">2</span>
+                <h3 class="font-bold text-slate-900 text-base mb-1">Add Your Menu &amp; Staff</h3>
+                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                    Type in your food and drinks with prices. Add simple sign-ins for cashiers, waiters, and kitchen cooks.
+                </p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
+                <span class="w-8 h-8 rounded-lg bg-blue-700 text-white font-bold flex items-center justify-center text-sm mb-3">3</span>
+                <h3 class="font-bold text-slate-900 text-base mb-1">Start Taking Orders</h3>
+                <p class="text-slate-600 text-xs sm:text-sm leading-relaxed">
+                    Open your shift, tap items for customer orders, print receipts, and watch your daily sales add up.
+                </p>
+            </div>
+
+        </div>
+
     </div>
 </section>
 
-<!-- ───────────────────────── Pricing ───────────────────────── -->
-<section id="pricing" class="py-20 lg:py-28 bg-[#faf7f3] border-y border-line scroll-mt-16">
+<!-- ════════════════════ PRICING PLANS ════════════════════ -->
+<section id="pricing" class="py-16 lg:py-20 bg-white border-b border-slate-200">
     <div class="max-w-6xl mx-auto px-4 sm:px-6">
-        <div class="max-w-2xl mx-auto text-center">
-            <p class="text-sm font-bold uppercase tracking-widest text-brand">Pricing</p>
-            <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">Simple monthly plans</h2>
-            <p class="mt-4 text-muted text-lg">Start free for <?= TRIAL_DAYS ?> days. Pick a plan when you're ready.</p>
+        
+        <div class="text-center max-w-xl mx-auto mb-12">
+            <span class="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Plans &amp; Pricing</span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2.5">
+                Affordable plans for any restaurant size.
+            </h2>
+            <p class="text-slate-500 text-sm mt-2">
+                Start with a free <?= TRIAL_DAYS ?>-day trial. Pick a plan whenever you're ready.
+            </p>
         </div>
-        <div class="mt-14 grid gap-6 <?= count($plans) >= 3 ? 'lg:grid-cols-3' : 'md:grid-cols-2' ?> max-w-5xl mx-auto">
+
+        <div class="grid gap-6 <?= count($plans) >= 3 ? 'lg:grid-cols-3' : 'md:grid-cols-2' ?> max-w-5xl mx-auto">
             <?php foreach ($plans as $p): ?>
                 <?php
                 $isFree     = (float)$p['price_month'] <= 0;
                 $isFeatured = (int)$p['id'] === (int)$featured;
                 ?>
-                <div class="relative rounded-2xl bg-white p-8 flex flex-col <?= $isFeatured ? 'border-2 border-brand shadow-2xl shadow-brand-dark/10 lg:-translate-y-2' : 'border border-line' ?>">
-                    <?php if ($isFeatured): ?>
-                        <span class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold uppercase tracking-wider bg-brand text-white rounded-full px-3 py-1">Most popular</span>
-                    <?php endif; ?>
-                    <h3 class="text-lg font-bold"><?= e($p['name']) ?></h3>
-                    <div class="mt-4 flex items-baseline gap-1">
-                        <span class="text-4xl font-extrabold tracking-tight"><?= $isFree ? 'Free' : plan_price((float)$p['price_month']) ?></span>
-                        <span class="text-muted"><?= $isFree ? 'for ' . TRIAL_DAYS . ' days' : '/ month' ?></span>
+                <div class="rounded-3xl p-7 flex flex-col justify-between border <?= $isFeatured ? 'border-blue-600 ring-2 ring-blue-600 bg-blue-50/20' : 'border-slate-200 bg-white' ?> shadow-sm">
+                    <div>
+                        <?php if ($isFeatured): ?>
+                            <span class="inline-block text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-600 text-white mb-3">
+                                Most Popular
+                            </span>
+                        <?php endif; ?>
+
+                        <h3 class="text-lg font-bold text-slate-900"><?= e($p['name']) ?></h3>
+
+                        <div class="my-4 flex items-baseline gap-1">
+                            <span class="text-3xl sm:text-4xl font-extrabold text-slate-900">
+                                <?= $isFree ? 'Free' : plan_price((float)$p['price_month']) ?>
+                            </span>
+                            <span class="text-xs text-slate-500">
+                                <?= $isFree ? 'for ' . TRIAL_DAYS . ' days' : '/ month' ?>
+                            </span>
+                        </div>
+
+                        <ul class="space-y-2.5 text-xs sm:text-sm text-slate-700 mb-6">
+                            <li class="flex items-center gap-2">
+                                <span class="text-emerald-600 font-bold">✓</span>
+                                <span><?= $p['max_users'] === null ? 'Unlimited staff accounts' : (int)$p['max_users'] . ' staff accounts' ?></span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <span class="text-emerald-600 font-bold">✓</span>
+                                <span><?= $p['max_menu_items'] === null ? 'Unlimited menu items' : (int)$p['max_menu_items'] . ' menu items' ?></span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <span class="text-emerald-600 font-bold">✓</span>
+                                <span>Fast Counter POS &amp; Kitchen Screen</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <span class="text-emerald-600 font-bold">✓</span>
+                                <span>Mobile money dial code printing</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <span class="text-emerald-600 font-bold">✓</span>
+                                <span>Shift cash tracking &amp; sales reports</span>
+                            </li>
+                        </ul>
                     </div>
-                    <ul class="mt-6 space-y-3 text-[15px] flex-1">
-                        <li class="flex gap-2"><span class="text-ok font-bold">✓</span>
-                            <?= $p['max_users'] === null ? 'Unlimited staff accounts' : (int)$p['max_users'] . ' staff accounts' ?></li>
-                        <li class="flex gap-2"><span class="text-ok font-bold">✓</span>
-                            <?= $p['max_menu_items'] === null ? 'Unlimited menu items' : (int)$p['max_menu_items'] . ' menu items' ?></li>
-                        <li class="flex gap-2"><span class="text-ok font-bold">✓</span> POS, kitchen screen &amp; cash drawer</li>
-                        <li class="flex gap-2"><span class="text-ok font-bold">✓</span> Mobile money dial codes</li>
-                        <li class="flex gap-2"><span class="text-ok font-bold">✓</span> All reports &amp; CSV export</li>
-                    </ul>
-                    <a href="<?= $register ?>"
-                       class="mt-8 text-center font-semibold rounded-xl py-3 transition-colors <?= $isFeatured ? 'bg-brand text-white hover:bg-brand-dark' : 'border border-line hover:border-brand text-ink' ?>">
-                        <?= $isFree ? 'Start free trial' : 'Start with a free trial' ?>
+
+                    <a href="<?= $register ?>" class="w-full text-center font-bold text-xs uppercase tracking-wider rounded-xl py-3.5 no-underline transition <?= $isFeatured ? 'btn-brand-primary' : 'btn-brand-outline' ?>">
+                        <?= $isFree ? 'Start Free Trial' : 'Choose Plan' ?>
                     </a>
                 </div>
             <?php endforeach; ?>
         </div>
+
     </div>
 </section>
 
-<!-- ───────────────────────── FAQ ───────────────────────── -->
-<section id="faq" class="py-20 lg:py-28 scroll-mt-16">
+<!-- ════════════════════ FAQ ════════════════════ -->
+<section id="faq" class="py-16 lg:py-20 bg-slate-50 border-b border-slate-200">
     <div class="max-w-3xl mx-auto px-4 sm:px-6">
-        <div class="text-center">
-            <p class="text-sm font-bold uppercase tracking-widest text-brand">FAQ</p>
-            <h2 class="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">Questions, answered</h2>
+        
+        <div class="text-center mb-10">
+            <span class="text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Common Questions</span>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-2.5">
+                Questions &amp; Answers
+            </h2>
         </div>
-        <div class="mt-12 divide-y divide-line border-y border-line">
+
+        <div class="space-y-3">
             <?php foreach ($faqs as [$q, $a]): ?>
-                <details class="group py-5">
-                    <summary class="flex justify-between items-center gap-4 cursor-pointer list-none font-semibold text-lg">
-                        <?= e($q) ?>
-                        <span class="flex-none w-8 h-8 rounded-full border border-line grid place-items-center text-muted group-open:rotate-45 transition-transform">+</span>
+                <details class="group bg-white rounded-2xl border border-slate-200 p-5 cursor-pointer">
+                    <summary class="flex justify-between items-center gap-4 font-bold text-sm sm:text-base text-slate-900 list-none">
+                        <span><?= e($q) ?></span>
+                        <span class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 group-open:rotate-45 transition-transform text-xs">
+                            +
+                        </span>
                     </summary>
-                    <p class="mt-3 text-muted leading-relaxed pr-12"><?= e($a) ?></p>
+                    <p class="mt-3 text-xs sm:text-sm text-slate-600 leading-relaxed pr-6">
+                        <?= e($a) ?>
+                    </p>
                 </details>
             <?php endforeach; ?>
         </div>
+
     </div>
 </section>
 
-<!-- ───────────────────────── Final CTA ───────────────────────── -->
-<section class="px-4 sm:px-6 pb-20 lg:pb-28">
-    <div class="max-w-6xl mx-auto relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink via-brand-dark to-brand px-6 py-16 sm:px-16 text-center text-white">
-        <div class="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-accent/30 blur-3xl"></div>
-        <h2 class="relative text-3xl sm:text-4xl font-extrabold tracking-tight">Ready to open the till?</h2>
-        <p class="relative mt-4 text-white/80 text-lg max-w-xl mx-auto">
-            Register your restaurant now and take your first order in minutes. Free for <?= TRIAL_DAYS ?> days.
+<!-- ════════════════════ CTA BANNER ════════════════════ -->
+<section class="py-16 lg:py-20 bg-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-3">
+            Ready to speed up your restaurant?
+        </h2>
+        <p class="text-slate-600 text-sm sm:text-base max-w-lg mx-auto mb-7">
+            Start taking orders today with your free <?= TRIAL_DAYS ?>-day trial. Setup takes less than 2 minutes.
         </p>
-        <div class="relative mt-8 flex flex-col sm:flex-row justify-center gap-3">
-            <a href="<?= $register ?>" class="inline-flex justify-center font-semibold bg-accent text-ink rounded-xl px-7 py-3.5 hover:bg-white transition-colors">Register your restaurant</a>
-            <a href="<?= $login ?>" class="inline-flex justify-center font-semibold border border-white/30 rounded-xl px-7 py-3.5 hover:bg-white/10 transition-colors">I already have an account</a>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a href="<?= $register ?>" class="btn-brand-primary w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-sm no-underline inline-flex items-center justify-center gap-2">
+                <span>Start Free Trial</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+            </a>
+            <a href="<?= $login ?>" class="btn-brand-outline w-full sm:w-auto px-7 py-3.5 rounded-xl font-semibold text-sm no-underline">
+                Sign In to Restaurant
+            </a>
         </div>
     </div>
 </section>
 
-</main>
+<!-- ════════════════════ FOOTER ════════════════════ -->
+<footer class="border-t border-slate-200 bg-slate-50 py-8 text-xs text-slate-500">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+        
+        <div class="flex items-center gap-2.5">
+            <div class="w-6 h-6 rounded-lg flex items-center justify-center text-white" style="background: linear-gradient(135deg, var(--sn), var(--sb));">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                    <path d="M17 6s-2-2-5-2-5 1.8-5 4c0 2.5 2.5 3.5 5 4.5s5 2 5 4.5c0 2.2-2 3-5 3s-5-2-5-2"
+                          stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <span class="font-bold text-slate-800">SAHAN ICT</span>
+            <span>&middot;</span>
+            <span>Restaurant POS</span>
+            <span>&middot;</span>
+            <span>&copy; <?= date('Y') ?></span>
+        </div>
 
-<!-- ───────────────────────── Footer ───────────────────────── -->
-<footer class="border-t border-line">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col md:flex-row gap-6 justify-between items-center text-sm text-muted">
-        <div class="flex items-center gap-2">
-            <span class="w-7 h-7 rounded-lg bg-gradient-to-br from-brand to-brand-dark text-white grid place-items-center text-sm">☕</span>
-            <span class="font-semibold text-ink">Restaurant<span class="text-brand">POS</span></span>
-            <span>· © <?= date('Y') ?></span>
+        <div class="flex flex-wrap items-center justify-center sm:justify-end gap-x-5 gap-y-2 font-medium">
+            <a href="#features" class="hover:text-blue-700 transition">Features</a>
+            <a href="#how" class="hover:text-blue-700 transition">How It Works</a>
+            <a href="#pricing" class="hover:text-blue-700 transition">Pricing</a>
+            <a href="<?= $login ?>" class="hover:text-blue-700 transition">Sign In</a>
+            <a href="<?= $register ?>" class="hover:text-blue-700 transition">Register</a>
+            <a href="<?= $platformLogin ?>" class="text-slate-700 hover:text-blue-700 font-semibold transition">Platform Admin</a>
+            <a href="https://sahanict.org" target="_blank" rel="noopener noreferrer" class="font-bold text-blue-700 hover:underline">
+                sahanict.org
+            </a>
         </div>
-        <div class="flex gap-6">
-            <a href="#features" class="hover:text-brand-dark">Features</a>
-            <a href="#pricing" class="hover:text-brand-dark">Pricing</a>
-            <a href="<?= $login ?>" class="hover:text-brand-dark">Sign in</a>
-            <a href="<?= $register ?>" class="hover:text-brand-dark">Register</a>
-        </div>
-        <div>
-            Made by <a href="https://sahanict.org" target="_blank" rel="noopener noreferrer" class="font-semibold text-brand hover:underline">SAHAN ICT</a>
-        </div>
+
     </div>
 </footer>
 
 <script>
-(function () {
-    var btn = document.getElementById('menuBtn'), menu = document.getElementById('mobileMenu');
-    btn.addEventListener('click', function () {
-        var open = menu.classList.toggle('hidden') === false;
-        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
-    menu.querySelectorAll('a[href^="#"]').forEach(function (a) {
-        a.addEventListener('click', function () { menu.classList.add('hidden'); });
-    });
-})();
+    const navToggle  = document.getElementById('navToggle');
+    const mobileMenu = document.getElementById('mobileMenu');
+    if (navToggle && mobileMenu) {
+        navToggle.addEventListener('click', function() {
+            mobileMenu.classList.toggle('hidden');
+        });
+        mobileMenu.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', function() {
+                mobileMenu.classList.add('hidden');
+            });
+        });
+    }
 </script>
+
 </body>
 </html>

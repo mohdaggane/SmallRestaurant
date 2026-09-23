@@ -10,17 +10,27 @@
 
   /* Stat card */
   .stat-card {
-    @apply bg-white border border-line rounded-xl p-4 h-full;
+    @apply bg-white border border-line rounded-xl p-3 sm:p-4 h-full;
   }
   .stat-card .label {
     @apply text-xs uppercase tracking-wider text-muted;
   }
   .stat-card .value {
-    @apply text-2xl font-bold mt-1;
+    @apply font-bold mt-1;
+    font-size: clamp(1.25rem, 4vw, 1.5rem);
   }
   .stat-card.accent { @apply border-l-4 border-l-accent; }
   .stat-card.good   { @apply border-l-4 border-l-ok; }
   .stat-card.bad    { @apply border-l-4 border-l-bad; }
+
+  /* Table scroll wrapper — prevents horizontal overflow on mobile */
+  .tbl-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 0.75rem;
+  }
+  .tbl-scroll::-webkit-scrollbar { height: 4px; }
+  .tbl-scroll::-webkit-scrollbar-thumb { background: #e6dcd1; border-radius: 2px; }
 
   /* POS item button */
   .item-btn {
@@ -190,13 +200,72 @@
 
 /* ── Utilities ───────────────────────────────────────────────────────── */
 @layer utilities {
-  .text-end   { text-align: right; }
-  .text-nowrap{ white-space: nowrap; }
+  .text-end    { text-align: right; }
+  .text-nowrap { white-space: nowrap; }
+
+  /* Prevent horizontal page scroll globally */
+  html, body { overflow-x: hidden; }
+
+  /* Responsive grid helpers */
+  .grid-auto-sm { grid-template-columns: repeat(auto-fill, minmax(min(200px,100%),1fr)); }
+  .grid-auto-md { grid-template-columns: repeat(auto-fill, minmax(min(260px,100%),1fr)); }
+}
+
+/* ── Responsive: make .card tables scroll on mobile ─────────────────── */
+@media (max-width: 767px) {
+  /* Any .card containing a .tbl gets scrollable overflow */
+  .card > .tbl,
+  .card > div > .tbl {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Standalone .tbl outside a card */
+  .tbl {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Restore normal table layout inside the scroll container */
+  .tbl thead,
+  .tbl tbody,
+  .tbl tfoot,
+  .tbl tr { display: table; width: 100%; table-layout: fixed; }
+  .tbl thead { table-layout: auto; }
+
+  /* Modal: full width on mobile */
+  .modal-box { max-width: 100% !important; margin: 0 0.5rem; }
+
+  /* Form grids: stack on mobile */
+  .grid.grid-cols-2:not(.stat-grid),
+  .grid.md\:grid-cols-2,
+  .grid.sm\:grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* ── Print ───────────────────────────────────────────────────────────── */
+@page {
+  /* 80mm wide, height = content only — no blank paper at the bottom */
+  size: 80mm auto;
+  margin: 0;
+}
+
 @media print {
   .no-print, .topbar, .app-sidebar { display: none !important; }
-  body { background: #fff; }
-  .receipt { border: 0; margin: 0; width: auto; }
+  body {
+    background: #fff;
+    margin: 0;
+    padding: 0;
+  }
+  /* Let the receipt fill the page and shrink-wrap vertically */
+  .receipt {
+    border: 0;
+    margin: 0;
+    padding: 8px 10px;   /* small side padding only */
+    width: 100%;
+    box-shadow: none;
+  }
 }
