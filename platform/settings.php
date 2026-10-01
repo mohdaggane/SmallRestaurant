@@ -38,18 +38,25 @@ if (is_post()) {
         if (!empty($_FILES['logo_file']['name']) && $_FILES['logo_file']['error'] === UPLOAD_ERR_OK) {
             $tmpFile = $_FILES['logo_file']['tmp_name'];
             $origName = $_FILES['logo_file']['name'];
+            $fileSize = $_FILES['logo_file']['size'] ?? 0;
             $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
-            $allowedExts = ['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif'];
+            $allowedExts = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
+            $allowedMimes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 
-            if (!in_array($ext, $allowedExts, true)) {
-                $error = __('ps.err_format');
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime  = $finfo->file($tmpFile);
+
+            if (!in_array($ext, $allowedExts, true) || !in_array($mime, $allowedMimes, true)) {
+                $error = __('ps.err_format', 'Only JPG, PNG, WEBP, and GIF image files are allowed.');
+            } elseif ($fileSize > 5 * 1024 * 1024) {
+                $error = __('ps.err_size', 'Logo image must be smaller than 5MB.');
             } else {
                 $uploadsDir = __DIR__ . '/../uploads';
                 if (!is_dir($uploadsDir)) {
                     mkdir($uploadsDir, 0755, true);
                 }
 
-                $fileName = 'platform_logo_' . time() . '.' . $ext;
+                $fileName = 'platform_logo_' . bin2hex(random_bytes(8)) . '.' . $ext;
                 $targetPath = $uploadsDir . '/' . $fileName;
 
                 if (move_uploaded_file($tmpFile, $targetPath)) {

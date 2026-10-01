@@ -1,0 +1,26 @@
+# ============================================================
+# Apache Web Server Security Configuration
+# ============================================================
+
+# Disable directory browsing
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "\.(sql|log|ini|env|sh|bak|md|git|yml|yaml)$">
+    Require all denied
+</FilesMatch>
+
+# Block hidden files and folders (e.g. .git, .vscode)
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Block access to internal directories
+RedirectMatch 403 ^/(backups|database|db_Migration|tests)/
+
+# Prevent MIME sniffing
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

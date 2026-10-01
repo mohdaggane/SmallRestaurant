@@ -175,10 +175,21 @@ function is_post(): bool
     return ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST';
 }
 
-/** Send a redirect and stop. */
+/** Send a redirect and stop. Validates host to prevent open redirect vulnerabilities. */
 function redirect(string $path): never
 {
-    header('Location: ' . (str_starts_with($path, 'http') ? $path : url($path)));
+    if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+        $host = parse_url($path, PHP_URL_HOST);
+        $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+        // Strip optional port from current host for comparison
+        $cleanCurrent = preg_replace('/:\d+$/', '', $currentHost);
+        if ($host !== $currentHost && $host !== $cleanCurrent) {
+            $path = url('');
+        }
+    } else {
+        $path = url($path);
+    }
+    header('Location: ' . $path);
     exit;
 }
 

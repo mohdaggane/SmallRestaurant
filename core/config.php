@@ -9,18 +9,24 @@ declare(strict_types=1);
 
 
 
+// ---------------------------------------------------------------- security headers
+if (!headers_sent()) {
+    header('X-Frame-Options: SAMEORIGIN');
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('Permissions-Policy: geolocation=(), camera=(), microphone=()');
+}
+
 // ---------------------------------------------------------------- database
-// const DB_HOST = 'localhost';
-// const DB_USER = 'sahan_supplement';
-// const DB_PASS = 'HG2L%zw6l7qf_tyy';
-// // The test runner (tests/run_all.sh) serves the app from PHP's built-in server
-// // against a throwaway copy. The override is honoured ONLY under that server,
-// // so Apache — the real till — can never be pointed at another database.
-// define('DB_NAME', PHP_SAPI === 'cli-server' && getenv('sahanict_restpos')
-//     ? (string)getenv('sahanict_restpos')
-//     : 'sahanict_restpos');
-
-
+//  const DB_HOST = 'localhost';
+//  const DB_USER = 'sahan_supplement';
+//  const DB_PASS = 'HG2L%zw6l7qf_tyy';
+// // // The test runner (tests/run_all.sh) serves the app from PHP's built-in server
+// // // against a throwaway copy. The override is honoured ONLY under that server,
+// // // so Apache — the real till — can never be pointed at another database.
+//  define('DB_NAME', PHP_SAPI === 'cli-server' && getenv('sahanict_restpos')
+//      ? (string)getenv('sahanict_restpos')
+//      : 'sahanict_restpos');
 
 
 // ---------------------------------------------------------------- database
@@ -45,7 +51,7 @@ const PLATFORM_PAY_INFO = 'Pay by mobile money to the platform owner, then send 
 date_default_timezone_set('Africa/Mogadishu');
 
 // Show errors while developing; switch to 0 on a live machine.
-const APP_DEBUG = true;
+const APP_DEBUG = false;
 ini_set('display_errors', APP_DEBUG ? '1' : '0');
 error_reporting(APP_DEBUG ? E_ALL : 0);
 

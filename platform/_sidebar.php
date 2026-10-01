@@ -7,10 +7,13 @@
 
 $current = basename($_SERVER['SCRIPT_NAME'] ?? '');
 
+$pendingPayReqs = (int)db_value("SELECT COUNT(*) FROM payment_requests WHERE status = 'pending'");
+
 $nav = [
-    [__('pf.restaurants', 'Restaurants'), 'platform/index.php', '🏪', ['index.php', 'company.php']],
-    [__('pf.plans',       'Plans'),       'platform/plans.php', '📦', ['plans.php']],
-    [__('pf.settings',    'Settings'),    'platform/settings.php', '⚙️', ['settings.php']],
+    [__('pf.restaurants', 'Restaurants'),      'platform/index.php',            '🏪', ['index.php', 'company.php']],
+    [__('pr.title',       'Payment Requests'), 'platform/payment_requests.php', '💳', ['payment_requests.php'], $pendingPayReqs],
+    [__('pf.plans',       'Plans'),            'platform/plans.php',            '📦', ['plans.php']],
+    [__('pf.settings',    'Settings'),         'platform/settings.php',         '⚙️', ['settings.php']],
 ];
 ?>
 <aside id="appSidebar" class="app-sidebar">
@@ -33,7 +36,8 @@ $nav = [
     </div>
 
     <ul class="list-none m-0 p-0 py-2">
-        <?php foreach ($nav as [$label, $path, $icon, $pages]): ?>
+        <?php foreach ($nav as $navItem): ?>
+            <?php [$label, $path, $icon, $pages] = $navItem; $badge = $navItem[4] ?? 0; ?>
             <?php $isActive = in_array($current, $pages, true); ?>
             <li>
                 <a href="<?= url($path) ?>"
@@ -43,7 +47,10 @@ $nav = [
                               ? 'bg-brand-light border-l-accent font-semibold text-brand-dark'
                               : 'border-l-transparent text-ink hover:bg-brand-light' ?>">
                     <span class="w-5 text-center flex-shrink-0"><?= $icon ?></span>
-                    <?= e($label) ?>
+                    <span class="flex-1"><?= e($label) ?></span>
+                    <?php if ($badge > 0): ?>
+                        <span class="badge badge-warning text-xs"><?= $badge ?></span>
+                    <?php endif; ?>
                 </a>
             </li>
         <?php endforeach; ?>

@@ -1,0 +1,28 @@
+# ============================================================
+# Uploads Security Configuration
+# Prevent execution of any scripts in the uploads folder
+# ============================================================
+
+# Disable script execution
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# Treat any script-like files as plain text
+AddType text/plain .html .htm .shtml .php .php3 .php4 .php5 .php7 .php8 .phtml .pht .pl .py .cgi .sh
+
+# Block direct execution of executable extensions
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|php8|pht|phps|pl|py|jsp|asp|sh|cgi|exe|htaccess)$">
+    Require all denied
+</FilesMatch>
+
+# Force MIME type protection
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
